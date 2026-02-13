@@ -11,8 +11,9 @@
             --primary: #4caf50;
             --text: #e0e0e0;
             --danger: #f44336;
-            --info: #2196f3;
+            --info: #2196f3; /* Bleu */
             --warn: #ff9800;
+            --purple: #B027F5; /* Violet spécifique */
         }
 
         body {
@@ -67,22 +68,22 @@
         }
 
         .type-btn.active {
-            background: var(--primary);
             color: white;
-            border-color: var(--primary);
         }
 
-        .type-btn[data-type="START"].active { background: var(--primary); }
-        .type-btn[data-type="STOP"].active { background: var(--danger); }
-        .type-btn[data-type="Contact"].active { background: var(--warn); }
-        .type-btn[data-type="Chgt Direction"].active { background: var(--info); }
+        /* Couleurs des boutons actifs */
+        .type-btn[data-type="START"].active { background: var(--primary); border-color: var(--primary); }
+        .type-btn[data-type="STOP"].active { background: var(--danger); border-color: var(--danger); }
+        .type-btn[data-type="Observation"].active { background: var(--info); border-color: var(--info); }
+        .type-btn[data-type="Contact"].active { background: var(--warn); border-color: var(--warn); }
+        .type-btn[data-type="Chgt Direction"].active { background: var(--purple); border-color: var(--purple); }
 
         .desc-row {
             display: flex;
             gap: 8px;
         }
 
-        input[type="text"] {
+        input[type="text"], textarea {
             flex-grow: 1;
             padding: 12px;
             background: #2a2a2a;
@@ -90,6 +91,8 @@
             color: white;
             border-radius: 6px;
             font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .btn-send {
@@ -111,17 +114,18 @@
 
         table { width: 100%; border-collapse: collapse; }
         th { font-size: 0.7rem; color: #666; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
-        td { padding: 10px 8px; border-bottom: 1px solid #222; vertical-align: top; font-size: 0.9rem; }
+        td { padding: 12px 8px; border-bottom: 1px solid #222; vertical-align: middle; font-size: 0.9rem; }
 
         .col-time { width: 55px; font-family: monospace; color: #888; font-size: 0.8rem; }
         .col-type { width: 70px; font-weight: bold; font-size: 0.75rem; }
         .col-contact { width: 30px; text-align: center; font-size: 1.1rem; }
 
-        /* Styles spécifiques types */
+        /* Couleurs de texte pour la colonne TYPE */
         .t-start { color: var(--primary); }
         .t-stop { color: var(--danger); }
+        .t-obs { color: var(--info); } /* Observation en bleu */
         .t-contact { color: var(--warn); }
-        .t-obs { color: var(--info); }
+        .t-dir { color: #ffffff; } /* Chgt Direction en blanc */
 
         .plate-tag {
             font-weight: bold;
@@ -143,7 +147,7 @@
         }
 
         .btn-action {
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             border: none;
             color: white;
@@ -167,7 +171,15 @@
         }
         .modal-content {
             background: #2d2d2d; padding: 20px; border-radius: 10px; width: 85%;
-            text-align: center; border: 1px solid var(--warn);
+            text-align: center; border: 1px solid #444;
+        }
+
+        .modal-buttons {
+            display: flex; gap: 10px; margin-top: 20px;
+        }
+
+        .btn-modal {
+            flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white;
         }
 
         @media print {
@@ -211,9 +223,7 @@
                     <th>Détails</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Les entrées apparaîtront ici -->
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
 
@@ -226,13 +236,35 @@
 
     <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
 
+    <!-- Modale de modification de ligne -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; font-size: 1rem;">Modifier la note</h3>
+            <textarea id="editInput" rows="4"></textarea>
+            <div class="modal-buttons" id="editActions">
+                <button class="btn-modal" style="background:#555" onclick="closeEditModal()">Fermer</button>
+                <button class="btn-modal" style="background:var(--danger)" id="btnDeleteLine" onclick="confirmDelete()">Supprimer</button>
+                <button class="btn-modal" style="background:var(--primary)" onclick="saveCurrentLine()">Valider</button>
+            </div>
+            <!-- Confirmation de suppression intégrée pour mobile -->
+            <div class="modal-buttons" id="deleteConfirm" style="display:none; flex-direction: column;">
+                <p style="margin:0 0 10px 0; color:var(--danger); font-weight:bold;">Confirmer la suppression ?</p>
+                <div style="display:flex; gap:10px; width:100%;">
+                    <button class="btn-modal" style="background:#555" onclick="cancelDelete()">Annuler</button>
+                    <button class="btn-modal" style="background:var(--danger)" onclick="executeDelete()">OUI, Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de Reset Global -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0">Effacer tout ?</h3>
             <p>Cette action est irréversible.</p>
-            <div style="display:flex; gap:10px; margin-top:20px">
-                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:#444; color:white" onclick="closeModal()">Annuler</button>
-                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:var(--danger); color:white" onclick="doClear()">Effacer</button>
+            <div class="modal-buttons">
+                <button class="btn-modal" style="background:#555" onclick="closeModal()">Annuler</button>
+                <button class="btn-modal" style="background:var(--danger)" onclick="doClear()">Effacer</button>
             </div>
         </div>
     </div>
@@ -242,6 +274,7 @@
         const descInput = document.getElementById('descInput');
         const typeBtns = document.querySelectorAll('.type-btn');
         let currentType = 'Observation';
+        let currentRowToEdit = null;
 
         // Horloge
         setInterval(() => {
@@ -259,7 +292,6 @@
             });
         });
 
-        // Détection immat (Identique V5)
         function formatDescription(text) {
             let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
             const regexSIV = /\b([A-Za-z]{2})([- ]?)(\d{3})([- ]?)([A-Za-z]{2})\b/g;
@@ -278,20 +310,22 @@
             };
 
             const row = document.createElement('tr');
+            row.dataset.rawDesc = entry.desc;
+            
             let tClass = 't-obs';
             if(entry.type === 'START') tClass = 't-start';
             if(entry.type === 'STOP') tClass = 't-stop';
+            if(entry.type === 'Observation') tClass = 't-obs';
             if(entry.type === 'Contact') tClass = 't-contact';
-            if(entry.type === 'Chgt Direction') tClass = 't-info';
+            if(entry.type === 'Chgt Direction') tClass = 't-dir';
 
             row.innerHTML = `
                 <td class="col-time">${entry.heure}</td>
                 <td class="col-type ${tClass}">${entry.type}</td>
-                <td class="col-contact" onclick="this.innerHTML = this.innerHTML === '' ? '👥' : ''">${entry.contact}</td>
-                <td onclick="editCell(this)">${formatDescription(entry.desc)}</td>
+                <td class="col-contact" onclick="toggleContact(event, this)">${entry.contact}</td>
+                <td class="col-desc" onclick="openEditModal(this.parentElement)">${formatDescription(entry.desc)}</td>
             `;
             
-            // On ajoute au début pour voir la dernière entrée en haut sur mobile (optionnel)
             tableBody.prepend(row);
 
             if(!data) {
@@ -300,22 +334,65 @@
             }
         }
 
-        function editCell(cell) {
-            const oldText = cell.innerText;
-            const newText = prompt("Modifier la description :", oldText);
-            if(newText !== null) cell.innerHTML = formatDescription(newText);
+        function toggleContact(e, cell) {
+            e.stopPropagation();
+            cell.innerHTML = cell.innerHTML === '' ? '👥' : '';
         }
 
-        // Export JSON (Compatible V5 Desktop)
+        // --- GESTION DE LA MODALE D'ÉDITION ---
+        function openEditModal(row) {
+            currentRowToEdit = row;
+            const currentDesc = row.dataset.rawDesc || row.querySelector('.col-desc').innerText;
+            document.getElementById('editInput').value = currentDesc;
+            
+            // Reset vue modale
+            document.getElementById('editActions').style.display = 'flex';
+            document.getElementById('deleteConfirm').style.display = 'none';
+            
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentRowToEdit = null;
+        }
+
+        function saveCurrentLine() {
+            if(currentRowToEdit) {
+                const newText = document.getElementById('editInput').value;
+                currentRowToEdit.dataset.rawDesc = newText;
+                currentRowToEdit.querySelector('.col-desc').innerHTML = formatDescription(newText);
+                closeEditModal();
+            }
+        }
+
+        function confirmDelete() {
+            document.getElementById('editActions').style.display = 'none';
+            document.getElementById('deleteConfirm').style.display = 'flex';
+        }
+
+        function cancelDelete() {
+            document.getElementById('deleteConfirm').style.display = 'none';
+            document.getElementById('editActions').style.display = 'flex';
+        }
+
+        function executeDelete() {
+            if(currentRowToEdit) {
+                currentRowToEdit.remove();
+                closeEditModal();
+            }
+        }
+
+        // --- EXPORT / IMPORT / RESET ---
         function exportJSON() {
-            const rows = document.querySelectorAll("tbody tr");
-            const entries = Array.from(rows).reverse().map(row => {
+            const rows = Array.from(document.querySelectorAll("tbody tr")).reverse();
+            const entries = rows.map(row => {
                 const cols = row.querySelectorAll("td");
                 return {
                     heure: cols[0].innerText,
                     type: cols[1].innerText,
                     contact: cols[2].innerHTML,
-                    desc: cols[3].innerText
+                    desc: row.dataset.rawDesc || cols[3].innerText
                 };
             });
             const dateStr = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
@@ -353,8 +430,6 @@
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
         descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
-
-        // Empêcher le zoom auto sur iOS
         document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     </script>
 </body>
