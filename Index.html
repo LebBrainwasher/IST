@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Surveillance Tactique Mobile</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #4caf50;
+            --text: #e0e0e0;
+            --danger: #f44336;
+            --info: #2196f3;
+            --warn: #ff9800;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--primary);
+            margin-bottom: 10px;
+        }
+
+        h1 { font-size: 0.9rem; margin: 0; color: var(--primary); text-transform: uppercase; }
+
+        /* Saisie Rapide */
+        .input-zone {
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .type-switcher {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: 1px solid #444;
+            background: #333;
+            color: #aaa;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .type-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .type-btn[data-type="START"].active { background: var(--primary); }
+        .type-btn[data-type="STOP"].active { background: var(--danger); }
+        .type-btn[data-type="Contact"].active { background: var(--warn); }
+        .type-btn[data-type="Chgt Direction"].active { background: var(--info); }
+
+        .desc-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .btn-send {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 0 20px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        /* Liste des entrées */
+        .log-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: #161616;
+            border-radius: 8px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 0.7rem; color: #666; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
+        td { padding: 10px 8px; border-bottom: 1px solid #222; vertical-align: top; font-size: 0.9rem; }
+
+        .col-time { width: 55px; font-family: monospace; color: #888; font-size: 0.8rem; }
+        .col-type { width: 70px; font-weight: bold; font-size: 0.75rem; }
+        .col-contact { width: 30px; text-align: center; font-size: 1.1rem; }
+
+        /* Styles spécifiques types */
+        .t-start { color: var(--primary); }
+        .t-stop { color: var(--danger); }
+        .t-contact { color: var(--warn); }
+        .t-obs { color: var(--info); }
+
+        .plate-tag {
+            font-weight: bold;
+            background: #eee;
+            color: #000;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            border-left: 3px solid #003399;
+            font-size: 0.85rem;
+        }
+
+        /* Actions Bas de page */
+        .action-bar {
+            display: flex;
+            gap: 8px;
+            padding-top: 10px;
+            overflow-x: auto;
+        }
+
+        .btn-action {
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            color: white;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .b-save { background: #673ab7; }
+        .b-load { background: #009688; }
+        .b-pdf { background: #2196f3; }
+        .b-clear { background: #555; }
+
+        /* Dialogues */
+        .modal {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.9); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content {
+            background: #2d2d2d; padding: 20px; border-radius: 10px; width: 85%;
+            text-align: center; border: 1px solid var(--warn);
+        }
+
+        @media print {
+            .input-zone, .action-bar, header { display: none !important; }
+            body { background: white; color: black; padding: 0; }
+            .log-container { overflow: visible; }
+            table { border: 1px solid #000; }
+            th { background: #eee; color: black; }
+            td { color: black !important; border-bottom: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="mainTitle">SURVEILLANCE MOBILE</h1>
+        <div id="clock" style="font-family: monospace; font-size: 0.8rem; color: #888;">00:00:00</div>
+    </header>
+
+    <div class="input-zone">
+        <div class="type-switcher" id="typeSwitcher">
+            <div class="type-btn" data-type="START">START</div>
+            <div class="type-btn" data-type="STOP">STOP</div>
+            <div class="type-btn active" data-type="Observation">OBS</div>
+            <div class="type-btn" data-type="Contact">CONT</div>
+            <div class="type-btn" data-type="Chgt Direction">DIR</div>
+        </div>
+        <div class="desc-row">
+            <input type="text" id="descInput" placeholder="Note, plaque, lieu..." autocomplete="off">
+            <button class="btn-send" onclick="addEntry()">OK</button>
+        </div>
+    </div>
+
+    <div class="log-container">
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Heure</th>
+                    <th>Type</th>
+                    <th>👥</th>
+                    <th>Détails</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Les entrées apparaîtront ici -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn-action b-save" onclick="exportJSON()">📤 Export</button>
+        <button class="btn-action b-load" onclick="triggerFile()">📥 Import</button>
+        <button class="btn-action b-pdf" onclick="window.print()">📄 PDF</button>
+        <button class="btn-action b-clear" onclick="askClear()">🗑️ Reset</button>
+    </div>
+
+    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0">Effacer tout ?</h3>
+            <p>Cette action est irréversible.</p>
+            <div style="display:flex; gap:10px; margin-top:20px">
+                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:#444; color:white" onclick="closeModal()">Annuler</button>
+                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:var(--danger); color:white" onclick="doClear()">Effacer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tableBody = document.querySelector('#logTable tbody');
+        const descInput = document.getElementById('descInput');
+        const typeBtns = document.querySelectorAll('.type-btn');
+        let currentType = 'Observation';
+
+        // Horloge
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('fr-FR');
+        }, 1000);
+
+        // Gestion du type d'événement
+        typeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                typeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentType = btn.getAttribute('data-type');
+                descInput.focus();
+            });
+        });
+
+        // Détection immat (Identique V5)
+        function formatDescription(text) {
+            let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
+            const regexSIV = /\b([A-Za-z]{2})([- ]?)(\d{3})([- ]?)([A-Za-z]{2})\b/g;
+            const regexFNI = /\b(\d{1,4})([- ]?)([A-Za-z]{2,3})([- ]?)(\d{2})\b/g;
+            processed = processed.replace(regexSIV, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1.toUpperCase()}-${p2}-${p3.toUpperCase()}</span>`);
+            processed = processed.replace(regexFNI, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1} ${p2.toUpperCase()} ${p3}</span>`);
+            return processed;
+        }
+
+        function addEntry(data = null) {
+            const entry = data || {
+                heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
+                type: currentType,
+                contact: currentType === 'Contact' ? '👥' : '',
+                desc: descInput.value
+            };
+
+            const row = document.createElement('tr');
+            let tClass = 't-obs';
+            if(entry.type === 'START') tClass = 't-start';
+            if(entry.type === 'STOP') tClass = 't-stop';
+            if(entry.type === 'Contact') tClass = 't-contact';
+            if(entry.type === 'Chgt Direction') tClass = 't-info';
+
+            row.innerHTML = `
+                <td class="col-time">${entry.heure}</td>
+                <td class="col-type ${tClass}">${entry.type}</td>
+                <td class="col-contact" onclick="this.innerHTML = this.innerHTML === '' ? '👥' : ''">${entry.contact}</td>
+                <td onclick="editCell(this)">${formatDescription(entry.desc)}</td>
+            `;
+            
+            // On ajoute au début pour voir la dernière entrée en haut sur mobile (optionnel)
+            tableBody.prepend(row);
+
+            if(!data) {
+                descInput.value = '';
+                descInput.focus();
+            }
+        }
+
+        function editCell(cell) {
+            const oldText = cell.innerText;
+            const newText = prompt("Modifier la description :", oldText);
+            if(newText !== null) cell.innerHTML = formatDescription(newText);
+        }
+
+        // Export JSON (Compatible V5 Desktop)
+        function exportJSON() {
+            const rows = document.querySelectorAll("tbody tr");
+            const entries = Array.from(rows).reverse().map(row => {
+                const cols = row.querySelectorAll("td");
+                return {
+                    heure: cols[0].innerText,
+                    type: cols[1].innerText,
+                    contact: cols[2].innerHTML,
+                    desc: cols[3].innerText
+                };
+            });
+            const dateStr = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+            const sessionData = { 
+                dateMission: "RAPPORT DE SURVEILLANCE DU " + new Date().toLocaleDateString('fr-FR'), 
+                logs: entries 
+            };
+            const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Surveillance_${dateStr}.json`;
+            a.click();
+        }
+
+        function triggerFile() { document.getElementById('fileInput').click(); }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    const logs = data.logs || data;
+                    tableBody.innerHTML = "";
+                    logs.forEach(l => addEntry(l));
+                } catch(err) { alert("Fichier invalide"); }
+            };
+            reader.readAsText(file);
+        }
+
+        function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
+        function doClear() { tableBody.innerHTML = ""; closeModal(); }
+
+        descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
+
+        // Empêcher le zoom auto sur iOS
+        document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+    </script>
+</body>
+</html>
