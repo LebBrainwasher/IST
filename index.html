@@ -16,15 +16,17 @@
             --purple: #B027F5; /* Violet spécifique */
         }
 
+        /* Utilisation de dvh pour une meilleure gestion des claviers mobiles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text);
             margin: 0;
-            padding: 10px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh; 
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -33,45 +35,47 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 8px;
+            padding-bottom: 5px;
             border-bottom: 1px solid var(--primary);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
-        h1 { font-size: 0.9rem; margin: 0; color: var(--primary); text-transform: uppercase; }
+        h1 { font-size: 0.85rem; margin: 0; color: var(--primary); text-transform: uppercase; }
 
-        /* Saisie Rapide */
+        /* Saisie Rapide fixe en haut */
         .input-zone {
             background: var(--card-bg);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            flex-shrink: 0;
         }
 
         .type-switcher {
             display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .type-btn {
             flex: 1;
-            padding: 8px 0;
+            padding: 10px 0;
             border: 1px solid #444;
             background: #333;
             color: #aaa;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
             text-align: center;
+            white-space: nowrap;
         }
 
         .type-btn.active {
             color: white;
         }
 
-        /* Couleurs des boutons actifs */
         .type-btn[data-type="START"].active { background: var(--primary); border-color: var(--primary); }
         .type-btn[data-type="STOP"].active { background: var(--danger); border-color: var(--danger); }
         .type-btn[data-type="Observation"].active { background: var(--info); border-color: var(--info); }
@@ -80,7 +84,7 @@
 
         .desc-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         input[type="text"], textarea {
@@ -99,33 +103,34 @@
             background: var(--primary);
             border: none;
             color: white;
-            padding: 0 20px;
+            padding: 0 15px;
             border-radius: 6px;
             font-weight: bold;
         }
 
-        /* Liste des entrées */
+        /* Liste des entrées - Prend tout l'espace restant */
         .log-container {
             flex-grow: 1;
             overflow-y: auto;
             background: #161616;
             border-radius: 8px;
+            margin-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
         }
 
         table { width: 100%; border-collapse: collapse; }
-        th { font-size: 0.7rem; color: #666; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
-        td { padding: 12px 8px; border-bottom: 1px solid #222; vertical-align: middle; font-size: 0.9rem; }
+        th { font-size: 0.65rem; color: #666; text-transform: uppercase; padding: 6px; text-align: left; border-bottom: 1px solid #333; position: sticky; top: 0; background: #161616; z-index: 1; }
+        td { padding: 10px 6px; border-bottom: 1px solid #222; vertical-align: middle; font-size: 0.85rem; }
 
-        .col-time { width: 55px; font-family: monospace; color: #888; font-size: 0.8rem; }
-        .col-type { width: 70px; font-weight: bold; font-size: 0.75rem; }
-        .col-contact { width: 30px; text-align: center; font-size: 1.1rem; }
+        .col-time { width: 50px; font-family: monospace; color: #888; font-size: 0.75rem; }
+        .col-type { width: 65px; font-weight: bold; font-size: 0.7rem; }
+        .col-contact { width: 25px; text-align: center; font-size: 1rem; }
 
-        /* Couleurs de texte pour la colonne TYPE */
         .t-start { color: var(--primary); }
         .t-stop { color: var(--danger); }
-        .t-obs { color: var(--info); } /* Observation en bleu */
+        .t-obs { color: var(--info); } 
         .t-contact { color: var(--warn); }
-        .t-dir { color: #ffffff; } /* Chgt Direction en blanc */
+        .t-dir { color: #ffffff; }
 
         .plate-tag {
             font-weight: bold;
@@ -135,27 +140,31 @@
             border-radius: 3px;
             font-family: monospace;
             border-left: 3px solid #003399;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
-        /* Actions Bas de page */
+        /* Actions Bas de page - Fixe en bas */
         .action-bar {
             display: flex;
-            gap: 8px;
-            padding-top: 10px;
+            gap: 6px;
+            padding: 4px 0;
+            flex-shrink: 0;
             overflow-x: auto;
+            background: var(--bg-color);
         }
 
         .btn-action {
-            padding: 12px;
+            flex: 1;
+            padding: 10px 8px;
             border-radius: 6px;
             border: none;
             color: white;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 4px;
         }
 
         .b-save { background: #673ab7; }
@@ -170,25 +179,25 @@
             justify-content: center; align-items: center; z-index: 100;
         }
         .modal-content {
-            background: #2d2d2d; padding: 20px; border-radius: 10px; width: 85%;
+            background: #2d2d2d; padding: 15px; border-radius: 10px; width: 90%;
             text-align: center; border: 1px solid #444;
         }
 
         .modal-buttons {
-            display: flex; gap: 10px; margin-top: 20px;
+            display: flex; gap: 8px; margin-top: 15px;
         }
 
         .btn-modal {
-            flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white;
+            flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 0.9rem;
         }
 
         @media print {
             .input-zone, .action-bar, header { display: none !important; }
-            body { background: white; color: black; padding: 0; }
-            .log-container { overflow: visible; }
-            table { border: 1px solid #000; }
-            th { background: #eee; color: black; }
-            td { color: black !important; border-bottom: 1px solid #ccc; }
+            body { background: white; color: black; padding: 0; overflow: visible; height: auto; }
+            .log-container { overflow: visible; height: auto; }
+            table { border: 1px solid #000; width: 100%; }
+            th { background: #eee; color: black; border: 1px solid #000; }
+            td { color: black !important; border: 1px solid #000; }
         }
     </style>
 </head>
@@ -196,7 +205,7 @@
 
     <header>
         <h1 id="mainTitle">SURVEILLANCE MOBILE</h1>
-        <div id="clock" style="font-family: monospace; font-size: 0.8rem; color: #888;">00:00:00</div>
+        <div id="clock" style="font-family: monospace; font-size: 0.75rem; color: #888;">00:00:00</div>
     </header>
 
     <div class="input-zone">
@@ -239,17 +248,17 @@
     <!-- Modale de modification de ligne -->
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h3 style="margin-top:0; font-size: 1rem;">Modifier la note</h3>
+            <h3 style="margin-top:0; font-size: 0.95rem;">Modifier la note</h3>
             <textarea id="editInput" rows="4"></textarea>
             <div class="modal-buttons" id="editActions">
                 <button class="btn-modal" style="background:#555" onclick="closeEditModal()">Fermer</button>
                 <button class="btn-modal" style="background:var(--danger)" id="btnDeleteLine" onclick="confirmDelete()">Supprimer</button>
                 <button class="btn-modal" style="background:var(--primary)" onclick="saveCurrentLine()">Valider</button>
             </div>
-            <!-- Confirmation de suppression intégrée pour mobile -->
+            <!-- Confirmation de suppression intégrée -->
             <div class="modal-buttons" id="deleteConfirm" style="display:none; flex-direction: column;">
                 <p style="margin:0 0 10px 0; color:var(--danger); font-weight:bold;">Confirmer la suppression ?</p>
-                <div style="display:flex; gap:10px; width:100%;">
+                <div style="display:flex; gap:8px; width:100%;">
                     <button class="btn-modal" style="background:#555" onclick="cancelDelete()">Annuler</button>
                     <button class="btn-modal" style="background:var(--danger)" onclick="executeDelete()">OUI, Supprimer</button>
                 </div>
@@ -260,8 +269,8 @@
     <!-- Modale de Reset Global -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
-            <h3 style="margin-top:0">Effacer tout ?</h3>
-            <p>Cette action est irréversible.</p>
+            <h3 style="margin-top:0; font-size: 1rem;">Effacer tout ?</h3>
+            <p style="font-size: 0.85rem;">Cette action est irréversible.</p>
             <div class="modal-buttons">
                 <button class="btn-modal" style="background:#555" onclick="closeModal()">Annuler</button>
                 <button class="btn-modal" style="background:var(--danger)" onclick="doClear()">Effacer</button>
@@ -330,7 +339,8 @@
 
             if(!data) {
                 descInput.value = '';
-                descInput.focus();
+                // Ne pas focus automatiquement pour éviter de rouvrir le clavier sur certains Android
+                // descInput.focus(); 
             }
         }
 
@@ -339,16 +349,12 @@
             cell.innerHTML = cell.innerHTML === '' ? '👥' : '';
         }
 
-        // --- GESTION DE LA MODALE D'ÉDITION ---
         function openEditModal(row) {
             currentRowToEdit = row;
             const currentDesc = row.dataset.rawDesc || row.querySelector('.col-desc').innerText;
             document.getElementById('editInput').value = currentDesc;
-            
-            // Reset vue modale
             document.getElementById('editActions').style.display = 'flex';
             document.getElementById('deleteConfirm').style.display = 'none';
-            
             document.getElementById('editModal').style.display = 'flex';
         }
 
@@ -383,7 +389,6 @@
             }
         }
 
-        // --- EXPORT / IMPORT / RESET ---
         function exportJSON() {
             const rows = Array.from(document.querySelectorAll("tbody tr")).reverse();
             const entries = rows.map(row => {
@@ -430,6 +435,8 @@
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
         descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
+        
+        // Empêcher le zoom automatique sur mobile lors du tap
         document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     </script>
 </body>
