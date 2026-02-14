@@ -11,8 +11,9 @@
             --primary: #4caf50;
             --text: #e0e0e0;
             --danger: #f44336;
-            --info: #2196f3;
+            --info: #2196f3; 
             --warn: #ff9800;
+            --purple: #B027F5;
         }
 
         body {
@@ -20,10 +21,11 @@
             background-color: var(--bg-color);
             color: var(--text);
             margin: 0;
-            padding: 10px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh; 
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -32,55 +34,49 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 8px;
+            padding-bottom: 5px;
             border-bottom: 1px solid var(--primary);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
-        h1 { font-size: 0.9rem; margin: 0; color: var(--primary); text-transform: uppercase; }
+        h1 { font-size: 0.85rem; margin: 0; color: var(--primary); text-transform: uppercase; }
 
-        /* Saisie Rapide */
         .input-zone {
             background: var(--card-bg);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            flex-shrink: 0;
         }
 
         .type-switcher {
             display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .type-btn {
             flex: 1;
-            padding: 8px 0;
+            padding: 10px 0;
             border: 1px solid #444;
             background: #333;
             color: #aaa;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
             text-align: center;
         }
 
-        .type-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
+        .type-btn.active { color: white; }
+        .type-btn[data-type="START"].active { background: var(--primary); border-color: var(--primary); }
+        .type-btn[data-type="STOP"].active { background: var(--danger); border-color: var(--danger); }
+        .type-btn[data-type="Observation"].active { background: var(--info); border-color: var(--info); }
+        .type-btn[data-type="Contact"].active { background: var(--warn); border-color: var(--warn); }
+        .type-btn[data-type="Chgt Direction"].active { background: var(--purple); border-color: var(--purple); }
 
-        .type-btn[data-type="START"].active { background: var(--primary); }
-        .type-btn[data-type="STOP"].active { background: var(--danger); }
-        .type-btn[data-type="Contact"].active { background: var(--warn); }
-        .type-btn[data-type="Chgt Direction"].active { background: var(--info); }
-
-        .desc-row {
-            display: flex;
-            gap: 8px;
-        }
+        .desc-row { display: flex; gap: 6px; }
 
         input[type="text"] {
             flex-grow: 1;
@@ -90,101 +86,89 @@
             color: white;
             border-radius: 6px;
             font-size: 1rem;
+            width: 100%;
         }
 
         .btn-send {
             background: var(--primary);
             border: none;
             color: white;
-            padding: 0 20px;
+            padding: 0 15px;
             border-radius: 6px;
             font-weight: bold;
         }
 
-        /* Liste des entrées */
         .log-container {
             flex-grow: 1;
             overflow-y: auto;
             background: #161616;
             border-radius: 8px;
+            margin-bottom: 8px;
         }
 
         table { width: 100%; border-collapse: collapse; }
-        th { font-size: 0.7rem; color: #666; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
-        td { padding: 10px 8px; border-bottom: 1px solid #222; vertical-align: top; font-size: 0.9rem; }
+        th { font-size: 0.65rem; color: #666; text-transform: uppercase; padding: 6px; text-align: left; border-bottom: 1px solid #333; position: sticky; top: 0; background: #161616; z-index: 1; }
+        td { padding: 10px 6px; border-bottom: 1px solid #222; vertical-align: middle; font-size: 0.85rem; }
 
-        .col-time { width: 55px; font-family: monospace; color: #888; font-size: 0.8rem; }
-        .col-type { width: 70px; font-weight: bold; font-size: 0.75rem; }
-        .col-contact { width: 30px; text-align: center; font-size: 1.1rem; }
+        .col-time { width: 50px; font-family: monospace; color: #888; font-size: 0.75rem; }
+        .col-type { width: 65px; font-weight: bold; font-size: 0.7rem; }
+        .col-contact { width: 25px; text-align: center; }
 
-        /* Styles spécifiques types */
         .t-start { color: var(--primary); }
         .t-stop { color: var(--danger); }
+        .t-obs { color: var(--info); } 
         .t-contact { color: var(--warn); }
-        .t-obs { color: var(--info); }
+        .t-dir { color: #ffffff; }
 
         .plate-tag {
             font-weight: bold;
             background: #eee;
             color: #000;
-            padding: 1px 4px;
+            padding: 2px 5px;
             border-radius: 3px;
-            font-family: monospace;
-            border-left: 3px solid #003399;
-            font-size: 0.85rem;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 4px solid #003399;
+            font-size: 0.9rem;
+            display: inline-block;
+            letter-spacing: 0.5px;
         }
 
-        /* Actions Bas de page */
         .action-bar {
             display: flex;
-            gap: 8px;
-            padding-top: 10px;
-            overflow-x: auto;
+            gap: 6px;
+            padding: 4px 0;
+            flex-shrink: 0;
         }
 
         .btn-action {
-            padding: 10px;
+            flex: 1;
+            padding: 10px 8px;
             border-radius: 6px;
             border: none;
             color: white;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            font-size: 0.75rem;
         }
 
         .b-save { background: #673ab7; }
-        .b-load { background: #009688; }
         .b-pdf { background: #2196f3; }
         .b-clear { background: #555; }
 
-        /* Dialogues */
         .modal {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.9); display: none;
             justify-content: center; align-items: center; z-index: 100;
         }
         .modal-content {
-            background: #2d2d2d; padding: 20px; border-radius: 10px; width: 85%;
-            text-align: center; border: 1px solid var(--warn);
-        }
-
-        @media print {
-            .input-zone, .action-bar, header { display: none !important; }
-            body { background: white; color: black; padding: 0; }
-            .log-container { overflow: visible; }
-            table { border: 1px solid #000; }
-            th { background: #eee; color: black; }
-            td { color: black !important; border-bottom: 1px solid #ccc; }
+            background: #2d2d2d; padding: 15px; border-radius: 10px; width: 90%;
+            text-align: center; border: 1px solid #444;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 id="mainTitle">SURVEILLANCE MOBILE</h1>
-        <div id="clock" style="font-family: monospace; font-size: 0.8rem; color: #888;">00:00:00</div>
+        <h1>SURVEILLANCE TACTIQUE</h1>
+        <div id="clock" style="font-family: monospace; font-size: 0.75rem;">00:00:00</div>
     </header>
 
     <div class="input-zone">
@@ -196,7 +180,7 @@
             <div class="type-btn" data-type="Chgt Direction">DIR</div>
         </div>
         <div class="desc-row">
-            <input type="text" id="descInput" placeholder="Note, plaque, lieu..." autocomplete="off">
+            <input type="text" id="descInput" placeholder="Dictez 'Immatriculation : ...'" autocomplete="off">
             <button class="btn-send" onclick="addEntry()">OK</button>
         </div>
     </div>
@@ -211,28 +195,22 @@
                     <th>Détails</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Les entrées apparaîtront ici -->
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
 
     <div class="action-bar">
         <button class="btn-action b-save" onclick="exportJSON()">📤 Export</button>
-        <button class="btn-action b-load" onclick="triggerFile()">📥 Import</button>
         <button class="btn-action b-pdf" onclick="window.print()">📄 PDF</button>
         <button class="btn-action b-clear" onclick="askClear()">🗑️ Reset</button>
     </div>
 
-    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
-
     <div id="confirmModal" class="modal">
         <div class="modal-content">
-            <h3 style="margin-top:0">Effacer tout ?</h3>
-            <p>Cette action est irréversible.</p>
-            <div style="display:flex; gap:10px; margin-top:20px">
-                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:#444; color:white" onclick="closeModal()">Annuler</button>
-                <button style="flex:1; padding:12px; border-radius:6px; border:none; background:var(--danger); color:white" onclick="doClear()">Effacer</button>
+            <h3>Effacer tout ?</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-action" style="background:#555" onclick="closeModal()">Annuler</button>
+                <button class="btn-action" style="background:var(--danger)" onclick="doClear()">Confirmer</button>
             </div>
         </div>
     </div>
@@ -243,119 +221,120 @@
         const typeBtns = document.querySelectorAll('.type-btn');
         let currentType = 'Observation';
 
-        // Horloge
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('fr-FR');
-        }, 1000);
+        const phonetics = {
+            'ALPHA': 'A', 'BRAVO': 'B', 'CHARLIE': 'C', 'CHARLY': 'C', 'DELTA': 'D', 'ECHO': 'E', 'ÉCHO': 'E',
+            'FOXTROT': 'F', 'GOLF': 'G', 'HOTEL': 'H', 'HÔTEL': 'H', 'INDIA': 'I', 'JULIETT': 'J', 'JULIETTE': 'J',
+            'KILO': 'K', 'LIMA': 'L', 'MIKE': 'M', 'NOVEMBER': 'N', 'OSCAR': 'O', 'PAPA': 'P', 'QUEBEC': 'Q', 'QUÉBEC': 'Q',
+            'ROMEO': 'R', 'ROMÉO': 'R', 'SIERRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'VICTOR': 'V', 'WHISKEY': 'W',
+            'X-RAY': 'X', 'XRAY': 'X', 'YANKEE': 'Y', 'ZULU': 'Z', 'ZOULOU': 'Z'
+        };
 
-        // Gestion du type d'événement
+        // --- FONCTION DE FORMATAGE CONDITIONNEL ---
+        function processImmatriculation(rawAfterKeyword) {
+            // 1. Nettoyage phonétique
+            let text = rawAfterKeyword.toUpperCase();
+            Object.keys(phonetics).forEach(word => {
+                const regex = new RegExp('\\b' + word + '\\b', 'g');
+                text = text.replace(regex, phonetics[word]);
+            });
+
+            // 2. Suppression de TOUTE la ponctuation et espaces (A, B. 123 -> AB123)
+            let clean = text.replace(/[^A-Z0-9]/g, '');
+
+            // 3. Application des masques selon la longueur
+            // SIV: AA123BB (7 chars)
+            if (clean.length === 7) {
+                return `<span class="plate-tag">${clean.slice(0,2)}-${clean.slice(2,5)}-${clean.slice(5,7)}</span>`;
+            }
+            
+            // FNI: 1234AB56 (8 chars) ou 123AB56 (7 chars mais commence par chiffres)
+            // On gère ici les cas classiques de l'ancien système
+            if (clean.match(/^\d/)) {
+                if (clean.length >= 7) {
+                    // On essaie de deviner le milieu (lettres)
+                    return `<span class="plate-tag">${clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3')}</span>`;
+                }
+            }
+
+            // Si format inconnu mais déclenché, on renvoie quand même en majuscule taggé
+            return `<span class="plate-tag">${clean}</span>`;
+        }
+
+        function formatDisplay(text) {
+            if (!text) return "";
+            
+            // Déclencheur par mot-clé
+            const trigger = "IMMATRICULATION :";
+            const upperText = text.toUpperCase();
+            
+            if (upperText.includes(trigger)) {
+                const parts = text.split(/immatriculation\s*:/i);
+                const prefix = parts[0];
+                const platePart = parts[1];
+                return prefix + "<strong>IMMATRICULATION :</strong> " + processImmatriculation(platePart);
+            }
+
+            // Fallback flèches
+            return text.replace(/->/g, "→").replace(/<-/g, "←");
+        }
+
+        // --- GESTION DES LOGS ---
+        function addEntry() {
+            const val = descInput.value.trim();
+            if (!val) return;
+
+            const row = document.createElement('tr');
+            const now = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            
+            let tClass = 't-obs';
+            if(currentType === 'START') tClass = 't-start';
+            if(currentType === 'STOP') tClass = 't-stop';
+            if(currentType === 'Contact') tClass = 't-contact';
+            if(currentType === 'Chgt Direction') tClass = 't-dir';
+
+            row.innerHTML = `
+                <td class="col-time">${now}</td>
+                <td class="col-type ${tClass}">${currentType}</td>
+                <td class="col-contact">${currentType === 'Contact' ? '👥' : ''}</td>
+                <td class="col-desc">${formatDisplay(val)}</td>
+            `;
+            
+            tableBody.prepend(row);
+            descInput.value = '';
+            descInput.focus();
+        }
+
+        // --- INTERFACE ---
         typeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 typeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentType = btn.getAttribute('data-type');
-                descInput.focus();
             });
         });
 
-        // Détection immat (Identique V5)
-        function formatDescription(text) {
-            let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
-            const regexSIV = /\b([A-Za-z]{2})([- ]?)(\d{3})([- ]?)([A-Za-z]{2})\b/g;
-            const regexFNI = /\b(\d{1,4})([- ]?)([A-Za-z]{2,3})([- ]?)(\d{2})\b/g;
-            processed = processed.replace(regexSIV, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1.toUpperCase()}-${p2}-${p3.toUpperCase()}</span>`);
-            processed = processed.replace(regexFNI, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1} ${p2.toUpperCase()} ${p3}</span>`);
-            return processed;
-        }
+        descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
 
-        function addEntry(data = null) {
-            const entry = data || {
-                heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
-                type: currentType,
-                contact: currentType === 'Contact' ? '👥' : '',
-                desc: descInput.value
-            };
-
-            const row = document.createElement('tr');
-            let tClass = 't-obs';
-            if(entry.type === 'START') tClass = 't-start';
-            if(entry.type === 'STOP') tClass = 't-stop';
-            if(entry.type === 'Contact') tClass = 't-contact';
-            if(entry.type === 'Chgt Direction') tClass = 't-info';
-
-            row.innerHTML = `
-                <td class="col-time">${entry.heure}</td>
-                <td class="col-type ${tClass}">${entry.type}</td>
-                <td class="col-contact" onclick="this.innerHTML = this.innerHTML === '' ? '👥' : ''">${entry.contact}</td>
-                <td onclick="editCell(this)">${formatDescription(entry.desc)}</td>
-            `;
-            
-            // On ajoute au début pour voir la dernière entrée en haut sur mobile (optionnel)
-            tableBody.prepend(row);
-
-            if(!data) {
-                descInput.value = '';
-                descInput.focus();
-            }
-        }
-
-        function editCell(cell) {
-            const oldText = cell.innerText;
-            const newText = prompt("Modifier la description :", oldText);
-            if(newText !== null) cell.innerHTML = formatDescription(newText);
-        }
-
-        // Export JSON (Compatible V5 Desktop)
         function exportJSON() {
-            const rows = document.querySelectorAll("tbody tr");
-            const entries = Array.from(rows).reverse().map(row => {
-                const cols = row.querySelectorAll("td");
-                return {
-                    heure: cols[0].innerText,
-                    type: cols[1].innerText,
-                    contact: cols[2].innerHTML,
-                    desc: cols[3].innerText
-                };
-            });
-            const dateStr = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
-            const sessionData = { 
-                dateMission: "RAPPORT DE SURVEILLANCE DU " + new Date().toLocaleDateString('fr-FR'), 
-                logs: entries 
-            };
-            const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
-            const url = URL.createObjectURL(blob);
+            const rows = Array.from(document.querySelectorAll("tbody tr")).map(tr => ({
+                h: tr.cells[0].innerText,
+                t: tr.cells[1].innerText,
+                d: tr.cells[3].innerText
+            }));
+            const blob = new Blob([JSON.stringify(rows, null, 2)], {type: "application/json"});
             const a = document.createElement("a");
-            a.href = url;
-            a.download = `Surveillance_${dateStr}.json`;
+            a.href = URL.createObjectURL(blob);
+            a.download = `mission_${new Date().getTime()}.json`;
             a.click();
-        }
-
-        function triggerFile() { document.getElementById('fileInput').click(); }
-
-        function importJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    const logs = data.logs || data;
-                    tableBody.innerHTML = "";
-                    logs.forEach(l => addEntry(l));
-                } catch(err) { alert("Fichier invalide"); }
-            };
-            reader.readAsText(file);
         }
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
-        descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
-
-        // Empêcher le zoom auto sur iOS
-        document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('fr-FR');
+        }, 1000);
     </script>
 </body>
 </html>
