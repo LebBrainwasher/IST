@@ -305,7 +305,24 @@
 
     let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
 
-    // ===== FORMAT MODERNE SIV (AB-123-CD) =====
+    // ===== TABLE ALPHABET RADIO =====
+    const radioMap = {
+        alpha: "A", bravo: "B", charlie: "C", delta: "D", echo: "E",
+        foxtrot: "F", golf: "G", hotel: "H", india: "I", juliett: "J",
+        kilo: "K", lima: "L", mike: "M", november: "N", oscar: "O",
+        papa: "P", quebec: "Q", romeo: "R", sierra: "S", tango: "T",
+        uniform: "U", victor: "V", whiskey: "W", xray: "X",
+        yankee: "Y", zulu: "Z"
+    };
+
+    // Remplacer alphabet radio par lettres
+    processed = processed.replace(/\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
+        function(match) {
+            return radioMap[match.toLowerCase()];
+        }
+    );
+
+    // ===== FORMAT MODERNE SIV =====
     const regexSIV = /([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{3})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])/g;
 
     processed = processed.replace(regexSIV, (match, l1, numbers, l2) => {
@@ -316,7 +333,7 @@
         return `<span class="plate-tag">${letters1}-${numbers}-${letters2}</span>`;
     });
 
-    // ===== ANCIEN FORMAT FNI (1234 AB 42) =====
+    // ===== ANCIEN FORMAT FNI =====
     const regexFNI = /(\d{1,4})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{2,3})/g;
 
     processed = processed.replace(regexFNI, (match, numbers, letters, dept) => {
@@ -328,6 +345,7 @@
 
     return processed;
 }
+
 
 
         function addEntry(data = null) {
