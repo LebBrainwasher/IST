@@ -278,14 +278,10 @@
         };
 
         function applyPlateStyle(rawText) {
-            // Nettoyage de la saisie (retrait tirets existants pour normaliser)
             let clean = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            
-            // SIV (Format AA123BB)
             if (clean.length === 7 && /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(clean)) {
                 return `<span class="plate-tag">${clean.slice(0,2)}-${clean.slice(2,5)}-${clean.slice(5,7)}</span>`;
             }
-            // FNI (Ex: 1234 AB 56)
             if (/^[0-9]+[A-Z]+[0-9]+$/.test(clean)) {
                 return `<span class="plate-tag">${clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3')}</span>`;
             }
@@ -303,36 +299,22 @@
 
         function formatDisplay(text) {
             if (!text) return "";
-
-            // 1. Traitement du mot-clé spécifique dictée
             const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
             const trigger = "IMMATRICULATION :";
-            
             if (normalized.includes(trigger)) {
                 const startIdx = normalized.indexOf(trigger);
                 const prefix = text.substring(0, startIdx);
                 const platePart = text.substring(startIdx + trigger.length);
                 return prefix + "<strong>IMMATRICULATION :</strong> " + processPhonetic(platePart);
             }
-
-            // 2. Scan des mots pour détection auto
-            // On divise par les espaces mais on vérifie si le mot contient des tirets
             const words = text.split(/(\s+)/);
             const formattedWords = words.map(word => {
-                // On prépare une version "propre" pour le test (sans tirets)
                 let testWord = word.toUpperCase().replace(/-/g, '').trim();
-                
-                // Regex SIV flexible (AA123BB ou AA-123-BB)
                 const isSiv = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(testWord);
-                // Regex FNI flexible
                 const isFni = /^[0-9]+[A-Z]+[0-9]+$/.test(testWord);
-
-                if (isSiv || isFni) {
-                    return applyPlateStyle(word);
-                }
+                if (isSiv || isFni) return applyPlateStyle(word);
                 return word;
             });
-
             let finalOutput = formattedWords.join("");
             return finalOutput.replace(/->/g, "→").replace(/<-/g, "←");
         }
@@ -340,26 +322,22 @@
         function addEntry(data = null) {
             const val = data ? data.desc : descInput.value.trim();
             if (!val && !data) return;
-
             const row = document.createElement('tr');
             row.dataset.rawDesc = val;
             const time = data ? data.heure : new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
             const type = data ? data.type : currentType;
             const contact = data ? data.contact : (currentType === 'Contact' ? '👥' : '');
-            
             let tClass = 't-obs';
             if(type === 'START') tClass = 't-start';
             if(type === 'STOP') tClass = 't-stop';
             if(type === 'Contact') tClass = 't-contact';
             if(type === 'Chgt Direction') tClass = 't-dir';
-
             row.innerHTML = `
                 <td class="col-time">${time}</td>
                 <td class="col-type ${tClass}">${type}</td>
                 <td class="col-contact" onclick="toggleContact(event, this)">${contact}</td>
                 <td class="col-desc" onclick="openEditModal(this.parentElement)">${formatDisplay(val)}</td>
             `;
-            
             tableBody.prepend(row);
             if(!data) {
                 descInput.value = '';
@@ -419,9 +397,17 @@
             }));
             const sessionData = { logs: rows };
             const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
+            
+            // Formatage de la date JJ-MM-AAAA
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const dateStr = `${day}-${month}-${year}`;
+
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `Surveillance_${new Date().getTime()}.json`;
+            a.download = `Surveillance_Tactique_${dateStr}.json`;
             a.click();
         }
 
