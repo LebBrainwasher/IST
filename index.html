@@ -305,33 +305,54 @@
 
     let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
 
-    // ===== TABLE ALPHABET RADIO =====
+    // ===== ALPHABET RADIO (variantes FR incluses) =====
     const radioMap = {
-        alpha: "A", bravo: "B", charlie: "C", delta: "D", echo: "E",
-        foxtrot: "F", golf: "G", hotel: "H", india: "I", juliett: "J",
-        kilo: "K", lima: "L", mike: "M", november: "N", oscar: "O",
-        papa: "P", quebec: "Q", romeo: "R", sierra: "S", tango: "T",
-        uniform: "U", victor: "V", whiskey: "W", xray: "X", "x-ray": "X",
-        yankee: "Y", zulu: "Z"
+        alpha: "A",
+        bravo: "B",
+        charlie: "C",
+        delta: "D",
+        echo: "E",
+        foxtrot: "F",
+        golf: "G",
+        hotel: "H",
+        india: "I",
+        juliett: "J",
+        kilo: "K",
+        lima: "L",
+        mike: "M",
+        november: "N",
+        oscar: "O",
+        papa: "P",
+        quebec: "Q",
+        romeo: "R",
+        sierra: "S",
+        tango: "T",
+        uniform: "U",
+        victor: "V",
+        whiskey: "W",
+        xray: "X",
+        "x-ray": "X",
+        yankee: "Y",
+        zulu: "Z",
+        zoulou: "Z"   // variante FR
     };
 
-    // Remplacement alphabet radio → lettres
+    // Remplacement radio sécurisé
     processed = processed.replace(
-        /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|x-ray|yankee|zulu)\b/gi,
+        /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|x-ray|yankee|zulu|zoulou)\b/gi,
         match => radioMap[match.toLowerCase()]
     );
 
-    // ===== NETTOYAGE DES VIRGULES DANS LES PLAQUES =====
-    // On autorise désormais : . , - espaces
-    const separator = "[\\.\\,\\s-]*";
+    // ===== SÉPARATEURS AUTORISÉS =====
+    const sep = "[\\.\\,\\s-]*";
 
-    // ===== FORMAT MODERNE SIV =====
+    // ===== FORMAT SIV =====
     const regexSIV = new RegExp(
-        "([A-Za-z]" + separator + "[A-Za-z])" +
-        separator +
+        "\\b([A-Za-z]" + sep + "[A-Za-z])" +
+        sep +
         "(\\d{3})" +
-        separator +
-        "([A-Za-z]" + separator + "[A-Za-z])",
+        sep +
+        "([A-Za-z]" + sep + "[A-Za-z])\\b",
         "g"
     );
 
@@ -340,22 +361,25 @@
         const letters1 = l1.replace(/[^A-Za-z]/g, '').toUpperCase();
         const letters2 = l2.replace(/[^A-Za-z]/g, '').toUpperCase();
 
+        if (letters1.length !== 2 || letters2.length !== 2) return match;
+
         return `<span class="plate-tag">${letters1}-${numbers}-${letters2}</span>`;
     });
 
-    // ===== ANCIEN FORMAT FNI =====
+    // ===== FORMAT FNI =====
     const regexFNI = new RegExp(
-        "(\\d{1,4})" +
-        separator +
-        "([A-Za-z]" + separator + "[A-Za-z])" +
-        separator +
-        "(\\d{2,3})",
+        "\\b(\\d{1,4})" +
+        sep +
+        "([A-Za-z]" + sep + "[A-Za-z])" +
+        sep +
+        "(\\d{2,3})\\b",
         "g"
     );
 
     processed = processed.replace(regexFNI, (match, numbers, letters, dept) => {
 
         const cleanLetters = letters.replace(/[^A-Za-z]/g, '').toUpperCase();
+        if (cleanLetters.length !== 2) return match;
 
         return `<span class="plate-tag">${numbers} ${cleanLetters} ${dept}</span>`;
     });
