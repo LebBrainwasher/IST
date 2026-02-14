@@ -11,11 +11,12 @@
             --primary: #4caf50;
             --text: #e0e0e0;
             --danger: #f44336;
-            --info: #2196f3; 
+            --info: #2196f3; /* Bleu */
             --warn: #ff9800;
-            --purple: #B027F5;
+            --purple: #B027F5; /* Violet spécifique */
         }
 
+        /* Utilisation de dvh pour une meilleure gestion des claviers mobiles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -42,6 +43,7 @@
 
         h1 { font-size: 0.85rem; margin: 0; color: var(--primary); text-transform: uppercase; }
 
+        /* Saisie Rapide fixe en haut */
         .input-zone {
             background: var(--card-bg);
             padding: 8px;
@@ -70,7 +72,9 @@
             white-space: nowrap;
         }
 
-        .type-btn.active { color: white; }
+        .type-btn.active {
+            color: white;
+        }
 
         .type-btn[data-type="START"].active { background: var(--primary); border-color: var(--primary); }
         .type-btn[data-type="STOP"].active { background: var(--danger); border-color: var(--danger); }
@@ -78,7 +82,10 @@
         .type-btn[data-type="Contact"].active { background: var(--warn); border-color: var(--warn); }
         .type-btn[data-type="Chgt Direction"].active { background: var(--purple); border-color: var(--purple); }
 
-        .desc-row { display: flex; gap: 6px; }
+        .desc-row {
+            display: flex;
+            gap: 6px;
+        }
 
         input[type="text"], textarea {
             flex-grow: 1;
@@ -101,6 +108,7 @@
             font-weight: bold;
         }
 
+        /* Liste des entrées - Prend tout l'espace restant */
         .log-container {
             flex-grow: 1;
             overflow-y: auto;
@@ -133,9 +141,9 @@
             font-family: monospace;
             border-left: 3px solid #003399;
             font-size: 0.8rem;
-            display: inline-block;
         }
 
+        /* Actions Bas de page - Fixe en bas */
         .action-bar {
             display: flex;
             gap: 6px;
@@ -153,7 +161,10 @@
             color: white;
             font-size: 0.75rem;
             white-space: nowrap;
-            display: flex; align-items: center; justify-content: center; gap: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
         }
 
         .b-save { background: #673ab7; }
@@ -161,6 +172,7 @@
         .b-pdf { background: #2196f3; }
         .b-clear { background: #555; }
 
+        /* Dialogues */
         .modal {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.9); display: none;
@@ -171,7 +183,9 @@
             text-align: center; border: 1px solid #444;
         }
 
-        .modal-buttons { display: flex; gap: 8px; margin-top: 15px; }
+        .modal-buttons {
+            display: flex; gap: 8px; margin-top: 15px;
+        }
 
         .btn-modal {
             flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 0.9rem;
@@ -203,8 +217,8 @@
             <div class="type-btn" data-type="Chgt Direction">DIR</div>
         </div>
         <div class="desc-row">
-            <input type="text" id="descInput" placeholder="Dictez ou tapez ici..." autocomplete="off">
-            <button class="btn-send" id="btnOk" onclick="addEntry()">OK</button>
+            <input type="text" id="descInput" placeholder="Note, plaque, lieu..." autocomplete="off">
+            <button class="btn-send" onclick="addEntry()">OK</button>
         </div>
     </div>
 
@@ -231,6 +245,7 @@
 
     <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
 
+    <!-- Modale de modification de ligne -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 0.95rem;">Modifier la note</h3>
@@ -240,6 +255,7 @@
                 <button class="btn-modal" style="background:var(--danger)" id="btnDeleteLine" onclick="confirmDelete()">Supprimer</button>
                 <button class="btn-modal" style="background:var(--primary)" onclick="saveCurrentLine()">Valider</button>
             </div>
+            <!-- Confirmation de suppression intégrée -->
             <div class="modal-buttons" id="deleteConfirm" style="display:none; flex-direction: column;">
                 <p style="margin:0 0 10px 0; color:var(--danger); font-weight:bold;">Confirmer la suppression ?</p>
                 <div style="display:flex; gap:8px; width:100%;">
@@ -250,6 +266,7 @@
         </div>
     </div>
 
+    <!-- Modale de Reset Global -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 1rem;">Effacer tout ?</h3>
@@ -268,90 +285,37 @@
         let currentType = 'Observation';
         let currentRowToEdit = null;
 
-        // --- MOTEUR DE NETTOYAGE PHONÉTIQUE AMÉLIORÉ ---
-        const phonetics = {
-            'alpha': 'A', 'bravo': 'B', 'charlie': 'C', 'charly': 'C', 'delta': 'D', 'écho': 'E', 'echo': 'E',
-            'foxtrot': 'F', 'golf': 'G', 'hôtel': 'H', 'hotel': 'H', 'india': 'I', 'juliett': 'J',
-            'juliet': 'J', 'kilo': 'K', 'lima': 'L', 'mike': 'M', 'november': 'N', 'oscar': 'O',
-            'papa': 'P', 'quebec': 'Q', 'québec': 'Q', 'romeo': 'R', 'roméo': 'R', 'sierra': 'S',
-            'tango': 'T', 'uniform': 'U', 'victor': 'V', 'whiskey': 'W', 'x-ray': 'X', 'xray': 'X',
-            'yankee': 'Y', 'zoulou': 'Z', 'zulu': 'Z'
-        };
-
-        function cleanDictation(text) {
-            if (!text) return "";
-            
-            // 1. Suppression préalable des virgules et points isolés qui cassent les regex
-            // Souvent "A, B" au lieu de "A B"
-            let cleaned = text.toLowerCase()
-                .replace(/,/g, ' ')
-                .replace(/(\b[a-z])\./g, '$1 ');
-
-            // 2. Remplacement des mots phonétiques par leurs lettres
-            Object.keys(phonetics).forEach(word => {
-                const regex = new RegExp('\\b' + word + '\\b', 'g');
-                cleaned = cleaned.replace(regex, phonetics[word]);
-            });
-
-            // 3. Suppression des espaces superflus après nettoyage
-            cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-            // 4. Passage en majuscule pour le traitement global
-            return cleaned.toUpperCase();
-        }
-
-        function formatDescription(text) {
-            if (!text) return "";
-            
-            // Nettoyage dictée (phonétique + ponctuation parasite)
-            let processed = cleanDictation(text);
-
-            // Flèches directionnelles
-            processed = processed.replace(/->/g, "→").replace(/<-/g, "←");
-
-            // --- REGEX PLAQUES ---
-            // SIV (AA 123 BB, AA-123-BB ou AA123BB)
-            // On cherche 2 lettres, puis des espaces/tirets optionnels, puis 3 chiffres, etc.
-            const regexSIV = /\b([A-Z]{2})[\s-]?(\d{3})[\s-]?([A-Z]{2})\b/g;
-            
-            // FNI (1234 AB 42)
-            const regexFNI = /\b(\d{1,4})[\s-]?([A-Z]{1,3})[\s-]?(\d{2,3})\b/g;
-
-            processed = processed.replace(regexSIV, (m, p1, p2, p3) => {
-                return `<span class="plate-tag">${p1}-${p2}-${p3}</span>`;
-            });
-
-            processed = processed.replace(regexFNI, (m, p1, p2, p3) => {
-                return `<span class="plate-tag">${p1} ${p2} ${p3}</span>`;
-            });
-
-            return processed;
-        }
-
-        // --- LOGIQUE APPLICATION ---
+        // Horloge
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('fr-FR');
         }, 1000);
 
+        // Gestion du type d'événement
         typeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 typeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentType = btn.getAttribute('data-type');
+                descInput.focus();
             });
         });
 
-        function addEntry(data = null) {
-            const rawValue = data ? (data.desc || "") : descInput.value;
-            
-            if (!data && rawValue.trim() === "") return;
+        function formatDescription(text) {
+            let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
+            const regexSIV = /\b([A-Za-z]{2})([- ]?)(\d{3})([- ]?)([A-Za-z]{2})\b/g;
+            const regexFNI = /\b(\d{1,4})([- ]?)([A-Za-z]{2,3})([- ]?)(\d{2})\b/g;
+            processed = processed.replace(regexSIV, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1.toUpperCase()}-${p2}-${p3.toUpperCase()}</span>`);
+            processed = processed.replace(regexFNI, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1} ${p2.toUpperCase()} ${p3}</span>`);
+            return processed;
+        }
 
+        function addEntry(data = null) {
             const entry = data || {
                 heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
                 type: currentType,
                 contact: currentType === 'Contact' ? '👥' : '',
-                desc: rawValue
+                desc: descInput.value
             };
 
             const row = document.createElement('tr');
@@ -372,10 +336,11 @@
             `;
             
             tableBody.prepend(row);
-            
+
             if(!data) {
                 descInput.value = '';
-                descInput.focus();
+                // Ne pas focus automatiquement pour éviter de rouvrir le clavier sur certains Android
+                // descInput.focus(); 
             }
         }
 
@@ -469,13 +434,9 @@
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
-        descInput.addEventListener('keydown', (e) => { 
-            if(e.key === 'Enter') {
-                e.preventDefault();
-                addEntry(); 
-            }
-        });
-
+        descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
+        
+        // Empêcher le zoom automatique sur mobile lors du tap
         document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     </script>
 </body>
