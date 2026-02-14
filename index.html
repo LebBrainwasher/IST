@@ -311,19 +311,29 @@
         foxtrot: "F", golf: "G", hotel: "H", india: "I", juliett: "J",
         kilo: "K", lima: "L", mike: "M", november: "N", oscar: "O",
         papa: "P", quebec: "Q", romeo: "R", sierra: "S", tango: "T",
-        uniform: "U", victor: "V", whiskey: "W", xray: "X",
+        uniform: "U", victor: "V", whiskey: "W", xray: "X", "x-ray": "X",
         yankee: "Y", zulu: "Z"
     };
 
-    // Remplacer alphabet radio par lettres
-    processed = processed.replace(/\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
-        function(match) {
-            return radioMap[match.toLowerCase()];
-        }
+    // Remplacement alphabet radio → lettres
+    processed = processed.replace(
+        /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|x-ray|yankee|zulu)\b/gi,
+        match => radioMap[match.toLowerCase()]
     );
 
+    // ===== NETTOYAGE DES VIRGULES DANS LES PLAQUES =====
+    // On autorise désormais : . , - espaces
+    const separator = "[\\.\\,\\s-]*";
+
     // ===== FORMAT MODERNE SIV =====
-    const regexSIV = /([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{3})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])/g;
+    const regexSIV = new RegExp(
+        "([A-Za-z]" + separator + "[A-Za-z])" +
+        separator +
+        "(\\d{3})" +
+        separator +
+        "([A-Za-z]" + separator + "[A-Za-z])",
+        "g"
+    );
 
     processed = processed.replace(regexSIV, (match, l1, numbers, l2) => {
 
@@ -334,7 +344,14 @@
     });
 
     // ===== ANCIEN FORMAT FNI =====
-    const regexFNI = /(\d{1,4})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{2,3})/g;
+    const regexFNI = new RegExp(
+        "(\\d{1,4})" +
+        separator +
+        "([A-Za-z]" + separator + "[A-Za-z])" +
+        separator +
+        "(\\d{2,3})",
+        "g"
+    );
 
     processed = processed.replace(regexFNI, (match, numbers, letters, dept) => {
 
@@ -345,6 +362,7 @@
 
     return processed;
 }
+
 
 
 
