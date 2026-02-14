@@ -132,6 +132,8 @@
             font-size: 0.9rem;
             display: inline-block;
             letter-spacing: 0.5px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .action-bar {
@@ -152,6 +154,7 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
+            cursor: pointer;
         }
 
         .b-save { background: #673ab7; }
@@ -175,10 +178,13 @@
         }
 
         @media print {
-            .input-zone, .action-bar, header { display: none !important; }
-            body { background: white; color: black; overflow: visible; height: auto; }
-            .log-container { overflow: visible; height: auto; }
-            td { color: black !important; border-bottom: 1px solid #ccc; }
+            .input-zone, .action-bar, header, .type-switcher, .desc-row, #fileInput { display: none !important; }
+            body { background: white; color: black; overflow: visible; height: auto; padding: 0; }
+            .log-container { overflow: visible; height: auto; background: transparent; }
+            table { border: 1px solid #ccc; }
+            th { background: #f0f0f0; color: black; border-bottom: 2px solid black; }
+            td { color: black !important; border-bottom: 1px solid #eee; }
+            .plate-tag { border: 1px solid #000; background: #eee !important; color: black !important; }
         }
     </style>
 </head>
@@ -198,7 +204,7 @@
             <div class="type-btn" data-type="Chgt Direction">DIR</div>
         </div>
         <div class="desc-row">
-            <input type="text" id="descInput" placeholder="Dictez 'Immatriculation : ...'" autocomplete="off">
+            <input type="text" id="descInput" placeholder="Saisissez ou dictez..." autocomplete="off">
             <button class="btn-send" onclick="addEntry()">OK</button>
         </div>
     </div>
@@ -224,10 +230,8 @@
         <button class="btn-action b-clear" onclick="askClear()">🗑️ Reset</button>
     </div>
 
-    <!-- Champ d'importation caché -->
     <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
 
-    <!-- Modal d'édition -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 0.95rem;">Modifier la note</h3>
@@ -247,7 +251,6 @@
         </div>
     </div>
 
-    <!-- Modal de confirmation Reset -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 1rem;">Effacer tout ?</h3>
@@ -270,63 +273,70 @@
             'ALPHA': 'A', 'ALFA': 'A', 'BRAVO': 'B', 'CHARLIE': 'C', 'CHARLY': 'C', 'DELTA': 'D', 'ECHO': 'E', 'ÉCHO': 'E',
             'FOXTROT': 'F', 'FOX-TROT': 'F', 'GOLF': 'G', 'HOTEL': 'H', 'HÔTEL': 'H', 'INDIA': 'I', 'JULIET': 'J', 'JULIETT': 'J', 'JULIETTE': 'J',
             'KILO': 'K', 'LIMA': 'L', 'MIKE': 'M', 'NOVEMBER': 'N', 'OSCAR': 'O', 'PAPA': 'P', 'QUEBEC': 'Q', 'QUÉBEC': 'Q',
-            'ROMEO': 'R', 'ROME': 'R', 'ROMÉO': 'R', 'SIERRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'UNIFORME': 'U', 'VICTOR': 'V', 'VICTORE': 'V', 'WHISKEY': 'W',
+            'ROMEO': 'R', 'ROMÉO': 'R', 'ROME': 'R', 'SIERRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'UNIFORME': 'U', 'VICTOR': 'V', 'WHISKEY': 'W',
             'X-RAY': 'X', 'XRAY': 'X', 'YANKEE': 'Y', 'ZULU': 'Z', 'ZOULOU': 'Z'
         };
 
-        // --- MOTEUR DE FORMATAGE IMMATRICULATION ---
-        function processImmatriculation(rawAfterKeyword) {
-            let text = rawAfterKeyword.toUpperCase();
+        function applyPlateStyle(rawText) {
+            // Nettoyage de la saisie (retrait tirets existants pour normaliser)
+            let clean = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
             
-            // 1. Remplacement phonétique AVANT suppression ponctuation
-            Object.keys(phonetics).forEach(word => {
-                const regex = new RegExp('\\b' + word + '\\b', 'g');
-                text = text.replace(regex, phonetics[word]);
-            });
-
-            // 2. Normalisation : Supprimer les accents résiduels (ex: ÉCHO non mappé si mal écrit)
-            // Cela transforme É -> E, À -> A, etc.
-            text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-            // 3. Nettoyage strict (garde seulement A-Z et 0-9)
-            let clean = text.replace(/[^A-Z0-9]/g, '');
-
-            // Format SIV (AA123BB -> AA-123-BB)
-            if (clean.length === 7 && isNaN(clean[0])) {
+            // SIV (Format AA123BB)
+            if (clean.length === 7 && /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(clean)) {
                 return `<span class="plate-tag">${clean.slice(0,2)}-${clean.slice(2,5)}-${clean.slice(5,7)}</span>`;
             }
-            
-            // Format FNI (1234 AB 56)
-            if (clean.match(/^\d/) && clean.length >= 7) {
+            // FNI (Ex: 1234 AB 56)
+            if (/^[0-9]+[A-Z]+[0-9]+$/.test(clean)) {
                 return `<span class="plate-tag">${clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3')}</span>`;
             }
-
             return `<span class="plate-tag">${clean}</span>`;
+        }
+
+        function processPhonetic(rawContent) {
+            let text = rawContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+            Object.keys(phonetics).forEach(word => {
+                const regex = new RegExp('(^|\\s|[^A-Z0-9])' + word + '($|\\s|[^A-Z0-9])', 'g');
+                text = text.replace(regex, '$1' + phonetics[word] + '$2');
+            });
+            return applyPlateStyle(text);
         }
 
         function formatDisplay(text) {
             if (!text) return "";
-            
+
+            // 1. Traitement du mot-clé spécifique dictée
+            const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
             const trigger = "IMMATRICULATION :";
-            const upperText = text.toUpperCase();
             
-            // On gère aussi la version normalisée pour le trigger au cas où
-            const normalizedTriggerSearch = upperText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            
-            if (normalizedTriggerSearch.includes(trigger)) {
-                // Découpage flexible insensible à la casse et aux accents
-                const parts = text.split(/immatriculation\s*:/i);
-                if (parts.length > 1) {
-                    const prefix = parts[0];
-                    const platePart = parts.slice(1).join(":"); // Rejoint au cas où il y aurait d'autres ":"
-                    return prefix + "<strong>IMMATRICULATION :</strong> " + processImmatriculation(platePart);
-                Part}
+            if (normalized.includes(trigger)) {
+                const startIdx = normalized.indexOf(trigger);
+                const prefix = text.substring(0, startIdx);
+                const platePart = text.substring(startIdx + trigger.length);
+                return prefix + "<strong>IMMATRICULATION :</strong> " + processPhonetic(platePart);
             }
 
-            return text.replace(/->/g, "→").replace(/<-/g, "←");
+            // 2. Scan des mots pour détection auto
+            // On divise par les espaces mais on vérifie si le mot contient des tirets
+            const words = text.split(/(\s+)/);
+            const formattedWords = words.map(word => {
+                // On prépare une version "propre" pour le test (sans tirets)
+                let testWord = word.toUpperCase().replace(/-/g, '').trim();
+                
+                // Regex SIV flexible (AA123BB ou AA-123-BB)
+                const isSiv = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(testWord);
+                // Regex FNI flexible
+                const isFni = /^[0-9]+[A-Z]+[0-9]+$/.test(testWord);
+
+                if (isSiv || isFni) {
+                    return applyPlateStyle(word);
+                }
+                return word;
+            });
+
+            let finalOutput = formattedWords.join("");
+            return finalOutput.replace(/->/g, "→").replace(/<-/g, "←");
         }
 
-        // --- GESTION DES ENTRÉES ---
         function addEntry(data = null) {
             const val = data ? data.desc : descInput.value.trim();
             if (!val && !data) return;
@@ -362,7 +372,6 @@
             cell.innerHTML = cell.innerHTML === '' ? '👥' : '';
         }
 
-        // --- MODAL EDITION ---
         function openEditModal(row) {
             currentRowToEdit = row;
             document.getElementById('editInput').value = row.dataset.rawDesc;
@@ -399,7 +408,6 @@
             }
         }
 
-        // --- IMPORT / EXPORT ---
         function triggerFile() { document.getElementById('fileInput').click(); }
 
         function exportJSON() {
@@ -432,7 +440,6 @@
             reader.readAsText(file);
         }
 
-        // --- UTILS ---
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
@@ -448,7 +455,8 @@
         descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
 
         setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('fr-FR');
+            const clockEl = document.getElementById('clock');
+            if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
     </script>
 </body>
