@@ -305,10 +305,11 @@
             // Flèches directionnelles
             processed = processed.replace(/->/g, "→").replace(/<-/g, "←");
 
-            // Regex SIV : AB 123 CD ou AB-123-CD ou AB123CD
+            // Regex SIV AMÉLIORÉE (plus flexible sur les espaces/tirets et détection sans séparateur)
+            // Détecte AA 123 BB, AA-123-BB ou AA123BB
             const regexSIV = /\b([A-Z]{2})[\s-]?(\d{3})[\s-]?([A-Z]{2})\b/g;
             
-            // Regex FNI : 1234 AB 42
+            // Regex FNI AMÉLIORÉE (1234 AB 42)
             const regexFNI = /\b(\d{1,4})[\s-]?([A-Z]{1,3})[\s-]?(\d{2,3})\b/g;
 
             processed = processed.replace(regexSIV, (m, p1, p2, p3) => {
@@ -339,7 +340,6 @@
         function addEntry(data = null) {
             const rawValue = data ? (data.desc || "") : descInput.value;
             
-            // On ne valide pas si c'est vide (sauf si import de données)
             if (!data && rawValue.trim() === "") return;
 
             const entry = data || {
@@ -464,10 +464,9 @@
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
-        // Écouteur pour la touche Entrée
         descInput.addEventListener('keydown', (e) => { 
             if(e.key === 'Enter') {
-                e.preventDefault(); // Empêche le retour à la ligne
+                e.preventDefault();
                 addEntry(); 
             }
         });
