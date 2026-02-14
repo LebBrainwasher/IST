@@ -204,7 +204,7 @@
         </div>
         <div class="desc-row">
             <input type="text" id="descInput" placeholder="Dictez ou tapez ici..." autocomplete="off">
-            <button class="btn-send" onclick="addEntry()">OK</button>
+            <button class="btn-send" id="btnOk" onclick="addEntry()">OK</button>
         </div>
     </div>
 
@@ -291,25 +291,24 @@
             // 2. Nettoyage des points après les lettres isolées (ex: "A. B. 123" -> "A B 123")
             cleaned = cleaned.replace(/(\b[a-z])\./g, '$1');
 
-            // 3. Suppression des tirets ou espaces superflus entre lettres/chiffres pour faciliter la regex immat
-            // Mais on garde un espace global pour ne pas tout coller.
+            // 3. Passage en majuscule pour le traitement global
             cleaned = cleaned.toUpperCase();
             
             return cleaned;
         }
 
         function formatDescription(text) {
+            if (!text) return "";
             // Nettoyage préalable pour la dictée
             let processed = cleanDictation(text);
 
             // Flèches directionnelles
             processed = processed.replace(/->/g, "→").replace(/<-/g, "←");
 
-            // Regex SIV : AB 123 CD ou AB-123-CD ou AB123CD (gère les espaces dictés)
-            // On cherche 2 lettres, puis (espace/tiret optionnel), puis 3 chiffres, puis (espace/tiret optionnel), puis 2 lettres
+            // Regex SIV : AB 123 CD ou AB-123-CD ou AB123CD
             const regexSIV = /\b([A-Z]{2})[\s-]?(\d{3})[\s-]?([A-Z]{2})\b/g;
             
-            // Regex FNI : 1234 AB 42 (gère les espaces dictés)
+            // Regex FNI : 1234 AB 42
             const regexFNI = /\b(\d{1,4})[\s-]?([A-Z]{1,3})[\s-]?(\d{2,3})\b/g;
 
             processed = processed.replace(regexSIV, (m, p1, p2, p3) => {
@@ -339,6 +338,10 @@
 
         function addEntry(data = null) {
             const rawValue = data ? (data.desc || "") : descInput.value;
+            
+            // On ne valide pas si c'est vide (sauf si import de données)
+            if (!data && rawValue.trim() === "") return;
+
             const entry = data || {
                 heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
                 type: currentType,
@@ -364,7 +367,11 @@
             `;
             
             tableBody.prepend(row);
-            if(!data) descInput.value = '';
+            
+            if(!data) {
+                descInput.value = '';
+                descInput.focus();
+            }
         }
 
         function toggleContact(e, cell) {
@@ -457,7 +464,14 @@
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; closeModal(); }
 
-        descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
+        // Écouteur pour la touche Entrée
+        descInput.addEventListener('keydown', (e) => { 
+            if(e.key === 'Enter') {
+                e.preventDefault(); // Empêche le retour à la ligne
+                addEntry(); 
+            }
+        });
+
         document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     </script>
 </body>
