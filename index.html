@@ -301,91 +301,53 @@
             });
         });
 
-        function formatDescription(text) {
+        // ===== ALPHABET RADIO AVEC VARIANTES =====
+const radioMap = {
+    alpha: "A",
+    bravo: "B",
+    charlie: "C",
+    charly: "C",
+    delta: "D",
+    echo: "E",
+    foxtrot: "F",
+    golf: "G",
+    hotel: "H",
+    india: "I",
+    juliett: "J",
+    kilo: "K",
+    lima: "L",
+    mike: "M",
+    november: "N",
+    oscar: "O",
+    papa: "P",
+    quebec: "Q",
+    romeo: "R",
+    sierra: "S",
+    tango: "T",
+    uniform: "U",
+    victor: "V",
+    whiskey: "W",
+    xray: "X",
+    "x-ray": "X",
+    yankee: "Y",
+    zulu: "Z",
+    zoulou: "Z"
+};
 
-    let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
+// Remplacement intelligent
+processed = processed.replace(/\b([a-zA-Z\-]+)\b/gi, function(word) {
 
-    // ===== ALPHABET RADIO (variantes FR incluses) =====
-    const radioMap = {
-        alpha: "A",
-        bravo: "B",
-        charlie: "C",
-        delta: "D",
-        echo: "E",
-        foxtrot: "F",
-        golf: "G",
-        hotel: "H",
-        india: "I",
-        juliett: "J",
-        kilo: "K",
-        lima: "L",
-        mike: "M",
-        november: "N",
-        oscar: "O",
-        papa: "P",
-        quebec: "Q",
-        romeo: "R",
-        sierra: "S",
-        tango: "T",
-        uniform: "U",
-        victor: "V",
-        whiskey: "W",
-        xray: "X",
-        "x-ray": "X",
-        yankee: "Y",
-        zulu: "Z",
-        zoulou: "Z"   // variante FR
-    };
+    const clean = word
+        .toLowerCase()
+        .replace(/[^a-z]/g, '');
 
-    // Remplacement radio sécurisé
-    processed = processed.replace(
-        /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|x-ray|yankee|zulu|zoulou)\b/gi,
-        match => radioMap[match.toLowerCase()]
-    );
+    if (radioMap[clean]) {
+        return radioMap[clean];
+    }
 
-    // ===== SÉPARATEURS AUTORISÉS =====
-    const sep = "[\\.\\,\\s-]*";
+    return word;
+});
 
-    // ===== FORMAT SIV =====
-    const regexSIV = new RegExp(
-        "\\b([A-Za-z]" + sep + "[A-Za-z])" +
-        sep +
-        "(\\d{3})" +
-        sep +
-        "([A-Za-z]" + sep + "[A-Za-z])\\b",
-        "g"
-    );
-
-    processed = processed.replace(regexSIV, (match, l1, numbers, l2) => {
-
-        const letters1 = l1.replace(/[^A-Za-z]/g, '').toUpperCase();
-        const letters2 = l2.replace(/[^A-Za-z]/g, '').toUpperCase();
-
-        if (letters1.length !== 2 || letters2.length !== 2) return match;
-
-        return `<span class="plate-tag">${letters1}-${numbers}-${letters2}</span>`;
-    });
-
-    // ===== FORMAT FNI =====
-    const regexFNI = new RegExp(
-        "\\b(\\d{1,4})" +
-        sep +
-        "([A-Za-z]" + sep + "[A-Za-z])" +
-        sep +
-        "(\\d{2,3})\\b",
-        "g"
-    );
-
-    processed = processed.replace(regexFNI, (match, numbers, letters, dept) => {
-
-        const cleanLetters = letters.replace(/[^A-Za-z]/g, '').toUpperCase();
-        if (cleanLetters.length !== 2) return match;
-
-        return `<span class="plate-tag">${numbers} ${cleanLetters} ${dept}</span>`;
-    });
-
-    return processed;
-}
 
 
 
