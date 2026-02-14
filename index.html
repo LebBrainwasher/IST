@@ -302,13 +302,33 @@
         });
 
         function formatDescription(text) {
-            let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
-            const regexSIV = /\b([A-Za-z]{2})([- ]?)(\d{3})([- ]?)([A-Za-z]{2})\b/g;
-            const regexFNI = /\b(\d{1,4})([- ]?)([A-Za-z]{2,3})([- ]?)(\d{2})\b/g;
-            processed = processed.replace(regexSIV, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1.toUpperCase()}-${p2}-${p3.toUpperCase()}</span>`);
-            processed = processed.replace(regexFNI, (m, p1, s1, p2, s2, p3) => `<span class="plate-tag">${p1} ${p2.toUpperCase()} ${p3}</span>`);
-            return processed;
-        }
+
+    let processed = text.replace(/->/g, "→").replace(/<-/g, "←");
+
+    // ===== FORMAT MODERNE SIV (AB-123-CD) =====
+    const regexSIV = /([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{3})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])/g;
+
+    processed = processed.replace(regexSIV, (match, l1, numbers, l2) => {
+
+        const letters1 = l1.replace(/[^A-Za-z]/g, '').toUpperCase();
+        const letters2 = l2.replace(/[^A-Za-z]/g, '').toUpperCase();
+
+        return `<span class="plate-tag">${letters1}-${numbers}-${letters2}</span>`;
+    });
+
+    // ===== ANCIEN FORMAT FNI (1234 AB 42) =====
+    const regexFNI = /(\d{1,4})[.\s-]*([A-Za-z][.\s-]*[A-Za-z])[.\s-]*(\d{2,3})/g;
+
+    processed = processed.replace(regexFNI, (match, numbers, letters, dept) => {
+
+        const cleanLetters = letters.replace(/[^A-Za-z]/g, '').toUpperCase();
+
+        return `<span class="plate-tag">${numbers} ${cleanLetters} ${dept}</span>`;
+    });
+
+    return processed;
+}
+
 
         function addEntry(data = null) {
             const entry = data || {
