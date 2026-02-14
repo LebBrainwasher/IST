@@ -270,7 +270,7 @@
             'ALPHA': 'A', 'ALFA': 'A', 'BRAVO': 'B', 'CHARLIE': 'C', 'CHARLY': 'C', 'DELTA': 'D', 'ECHO': 'E', 'ÉCHO': 'E',
             'FOXTROT': 'F', 'FOX-TROT': 'F', 'GOLF': 'G', 'HOTEL': 'H', 'HÔTEL': 'H', 'INDIA': 'I', 'JULIET': 'J', 'JULIETT': 'J', 'JULIETTE': 'J',
             'KILO': 'K', 'LIMA': 'L', 'MIKE': 'M', 'NOVEMBER': 'N', 'OSCAR': 'O', 'PAPA': 'P', 'QUEBEC': 'Q', 'QUÉBEC': 'Q',
-            'ROMEO': 'R', 'ROMÉO': 'R', 'ROME': 'R', 'SIERRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'UNIFORME': 'U', 'VICTOR': 'V', 'VICTORE': 'V', 'WHISKEY': 'W',
+            'ROMEO': 'R', 'ROME': 'R', 'ROMÉO': 'R', 'SIERRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'UNIFORME': 'U', 'VICTOR': 'V', 'VICTORE': 'V', 'WHISKEY': 'W',
             'X-RAY': 'X', 'XRAY': 'X', 'YANKEE': 'Y', 'ZULU': 'Z', 'ZOULOU': 'Z'
         };
 
@@ -278,13 +278,17 @@
         function processImmatriculation(rawAfterKeyword) {
             let text = rawAfterKeyword.toUpperCase();
             
-            // Remplacement phonétique
+            // 1. Remplacement phonétique AVANT suppression ponctuation
             Object.keys(phonetics).forEach(word => {
                 const regex = new RegExp('\\b' + word + '\\b', 'g');
                 text = text.replace(regex, phonetics[word]);
             });
 
-            // Nettoyage strict (suppression ponctuation et espaces)
+            // 2. Normalisation : Supprimer les accents résiduels (ex: ÉCHO non mappé si mal écrit)
+            // Cela transforme É -> E, À -> A, etc.
+            text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+            // 3. Nettoyage strict (garde seulement A-Z et 0-9)
             let clean = text.replace(/[^A-Z0-9]/g, '');
 
             // Format SIV (AA123BB -> AA-123-BB)
@@ -306,11 +310,17 @@
             const trigger = "IMMATRICULATION :";
             const upperText = text.toUpperCase();
             
-            if (upperText.includes(trigger)) {
+            // On gère aussi la version normalisée pour le trigger au cas où
+            const normalizedTriggerSearch = upperText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            if (normalizedTriggerSearch.includes(trigger)) {
+                // Découpage flexible insensible à la casse et aux accents
                 const parts = text.split(/immatriculation\s*:/i);
-                const prefix = parts[0];
-                const platePart = parts[1];
-                return prefix + "<strong>IMMATRICULATION :</strong> " + processImmatriculation(platePart);
+                if (parts.length > 1) {
+                    const prefix = parts[0];
+                    const platePart = parts.slice(1).join(":"); // Rejoint au cas où il y aurait d'autres ":"
+                    return prefix + "<strong>IMMATRICULATION :</strong> " + processImmatriculation(platePart);
+                Part}
             }
 
             return text.replace(/->/g, "→").replace(/<-/g, "←");
