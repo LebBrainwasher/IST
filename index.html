@@ -420,11 +420,12 @@
         function triggerFile() { document.getElementById('fileInput').click(); }
 
         function exportJSON() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('fr-FR'); 
+            const fileNameDate = now.toLocaleDateString('fr-FR').replace(/\//g, '-');
+
             const rows = Array.from(document.querySelectorAll("tbody tr")).reverse().map(tr => {
-                // Pour l'export, on convertit la description "radio" en description "texte clair"
-                // Cela permet à la version bureau de lire correctement les données sans modification
                 const cleanDesc = cleanPhoneticForExport(tr.dataset.rawDesc);
-                
                 return {
                     heure: tr.cells[0].innerText,
                     type: tr.cells[1].innerText,
@@ -432,18 +433,16 @@
                     desc: cleanDesc
                 };
             });
-            const sessionData = { logs: rows };
-            const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
-            
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const dateStr = `${day}-${month}-${year}`;
 
+            const sessionData = {
+                date: dateStr,
+                logs: rows
+            };
+
+            const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `Session_Surveillance_${dateStr}.json`;
+            a.download = `Session_Surveillance_${fileNameDate}.json`;
             a.click();
         }
 
@@ -454,6 +453,7 @@
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
+                    // Rétrocompatibilité : accepte logs (nouveau) ou data directement (ancien)
                     const logs = data.logs || data;
                     tableBody.innerHTML = "";
                     logs.forEach(l => addEntry(l));
