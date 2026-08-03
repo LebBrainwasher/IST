@@ -517,6 +517,23 @@
         const typeBtns = document.querySelectorAll('.type-btn');
         let currentType = 'Observation';
         let currentRowToEdit = null;
+        // Date effective de la surveillance, indépendante de la date d'impression.
+        let sessionDateISO = new Date().toISOString().slice(0, 10);
+
+        function isoToFrenchDate(isoDate) {
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate || '');
+            return match ? `${match[3]}/${match[2]}/${match[1]}` : new Date().toLocaleDateString('fr-FR');
+        }
+
+        function extractSessionDate(data) {
+            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data.dateRaw || '')) return data.dateRaw;
+            if (data && /^\d{4}-\d{2}-\d{2}$/.test(data.sessionDateISO || '')) return data.sessionDateISO;
+            const direct = data && typeof data.date === 'string' ? data.date.match(/(\d{2})\/(\d{2})\/(\d{4})/) : null;
+            if (direct) return `${direct[3]}-${direct[2]}-${direct[1]}`;
+            const legacy = data && typeof data.dateMission === 'string' ? data.dateMission.match(/(\d{2})\/(\d{2})\/(\d{4})/) : null;
+            if (legacy) return `${legacy[3]}-${legacy[2]}-${legacy[1]}`;
+            return null;
+        }
 
         const phonetics = {
             'ALPHA': 'A', 'ALFA': 'A', 'BRAVO': 'B', 'CHARLIE': 'C', 'CHARLY': 'C', 'DELTA': 'D', 'ECHO': 'E', 'ÉCHO': 'E',
@@ -681,14 +698,15 @@
                     desc: cleanDesc
                 };
             });
-            const sessionData = { logs: rows };
+            const surveillanceDate = isoToFrenchDate(sessionDateISO);
+            const sessionData = {
+                dateRaw: sessionDateISO,
+                date: surveillanceDate,
+                dateMission: `JOURNAL DE SURVEILLANCE DU ${surveillanceDate}`,
+                logs: rows
+            };
             const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
-            
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const dateStr = `${day}-${month}-${year}`;
+            const dateStr = surveillanceDate.replace(/\//g, '-');
 
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
@@ -704,6 +722,15 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     const logs = data.logs || data;
+                    const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
+                    // Pour les anciens fichiers sans métadonnée, la date du fichier est utilisée
+                    // si elle est disponible ; sinon la date courante reste la valeur de repli.
+                    if (importedDate) {
+                        sessionDateISO = importedDate;
+                    } else if (file.lastModified) {
+                        const fileDate = new Date(file.lastModified);
+                        sessionDateISO = `${fileDate.getFullYear()}-${String(fileDate.getMonth()+1).padStart(2,'0')}-${String(fileDate.getDate()).padStart(2,'0')}`;
+                    }
                     tableBody.innerHTML = "";
                     logs.forEach(l => addEntry(l));
                 } catch(err) { alert("Format invalide"); }
@@ -713,7 +740,7 @@
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-        function doClear() { tableBody.innerHTML = ""; closeModal(); }
+        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); closeModal(); }
 
         typeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -728,9 +755,8 @@
 
         let printOrderReversed = false;
         function prepareMobilePrint() {
-            const now = new Date();
             const printDate = document.getElementById('printDate');
-            if (printDate) printDate.textContent = now.toLocaleDateString('fr-FR');
+            if (printDate) printDate.textContent = isoToFrenchDate(sessionDateISO);
             if (!printOrderReversed) {
                 Array.from(tableBody.children).reverse().forEach(row => tableBody.appendChild(row));
                 printOrderReversed = true;
