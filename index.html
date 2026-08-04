@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Surveillance Tactique Mobile</title>
+    <title>HORUS - Surveillance Tactique Mobile GPS</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -178,13 +178,75 @@
         }
 
 
+
+        .operator-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: end;
+            margin-bottom: 8px;
+        }
+        .operator-field label {
+            display: block;
+            margin: 0 0 4px 2px;
+            color: #9ca3af;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .operator-field input { padding: 9px 10px; font-size: .85rem; }
+        .gps-btn {
+            min-height: 38px;
+            padding: 0 11px;
+            border: 1px solid #455a64;
+            border-radius: 6px;
+            background: #263238;
+            color: #e5e7eb;
+            font-size: .72rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .gps-btn.loading { background: #37474f; color: #ffcc80; }
+        .gps-btn.ready { background: #14532d; border-color: #22c55e; color: #dcfce7; }
+        .gps-status {
+            min-height: 18px;
+            margin: -2px 0 7px 1px;
+            color: #9ca3af;
+            font-size: .64rem;
+            line-height: 1.3;
+        }
+        .gps-status.ok { color: #86efac; }
+        .gps-status.error { color: #fca5a5; }
+        .col-gps { width: 28px; text-align: center; }
+        .gps-indicator {
+            border: 0;
+            background: transparent;
+            color: #60a5fa;
+            padding: 3px;
+            font-size: .9rem;
+            cursor: pointer;
+        }
+        .gps-indicator:active { transform: scale(.92); }
+        .gps-details {
+            text-align: left;
+            background: #202020;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: .76rem;
+            line-height: 1.55;
+        }
+        .gps-details strong { color: #93c5fd; }
+
         .print-report-header { display: none; }
         .print-logo-wrap { display: none; }
 
         @media print {
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .input-zone, .action-bar, header, .type-switcher, .desc-row, #fileInput,
-            .modal { display: none !important; }
+            .modal, th.col-gps, td.col-gps { display: none !important; }
             body {
                 background: white !important;
                 color: black !important;
@@ -445,6 +507,14 @@
     </header>
 
     <div class="input-zone">
+        <div class="operator-row">
+            <div class="operator-field">
+                <label for="operatorInput">Identifiant opérateur</label>
+                <input type="text" id="operatorInput" placeholder="Ex. Équipe 1 / Alpha" autocomplete="off">
+            </div>
+            <button type="button" id="gpsButton" class="gps-btn" onclick="capturePosition()">📍 Position</button>
+        </div>
+        <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
             <div class="type-btn" data-type="STOP">STOP</div>
@@ -465,6 +535,7 @@
                     <th>Heure</th>
                     <th>Type</th>
                     <th>👥</th>
+                    <th class="col-gps">📍</th>
                     <th>Détails</th>
                 </tr>
             </thead>
@@ -500,6 +571,17 @@
         </div>
     </div>
 
+    <div id="gpsModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; font-size: 1rem;">Point de géolocalisation</h3>
+            <div id="gpsModalDetails" class="gps-details"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal" style="background:#555" onclick="closeGpsModal()">Fermer</button>
+                <button class="btn-modal" style="background:var(--danger)" onclick="removeGpsFromCurrentRow()">Retirer le point</button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 1rem;">Effacer tout ?</h3>
@@ -515,8 +597,13 @@
         const tableBody = document.querySelector('#logTable tbody');
         const descInput = document.getElementById('descInput');
         const typeBtns = document.querySelectorAll('.type-btn');
+        const operatorInput = document.getElementById('operatorInput');
+        const gpsButton = document.getElementById('gpsButton');
+        const gpsStatus = document.getElementById('gpsStatus');
         let currentType = 'Observation';
         let currentRowToEdit = null;
+        let currentGpsRow = null;
+        let pendingGeolocation = null;
         // Date effective de la surveillance, indépendante de la date d'impression.
         let sessionDateISO = new Date().toISOString().slice(0, 10);
 
@@ -533,6 +620,109 @@
             const legacy = data && typeof data.dateMission === 'string' ? data.dateMission.match(/(\d{2})\/(\d{2})\/(\d{4})/) : null;
             if (legacy) return `${legacy[3]}-${legacy[2]}-${legacy[1]}`;
             return null;
+        }
+
+
+        function normalizeOperator(value) {
+            return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase().replace(/[^A-Z0-9]+/g, '').trim();
+        }
+
+        function saveOperatorPreference() {
+            try { localStorage.setItem('horusOperatorLabel', operatorInput.value.trim()); } catch (_) {}
+        }
+
+        function restoreOperatorPreference() {
+            try { operatorInput.value = localStorage.getItem('horusOperatorLabel') || ''; } catch (_) {}
+        }
+
+        function resetPendingGps(message = 'Aucune position associée à la prochaine entrée.') {
+            pendingGeolocation = null;
+            gpsButton.classList.remove('loading', 'ready');
+            gpsButton.textContent = '📍 Position';
+            gpsStatus.className = 'gps-status';
+            gpsStatus.textContent = message;
+        }
+
+        function capturePosition() {
+            if (!navigator.geolocation) {
+                gpsStatus.className = 'gps-status error';
+                gpsStatus.textContent = 'La géolocalisation n’est pas disponible sur ce navigateur.';
+                return;
+            }
+            gpsButton.classList.remove('ready');
+            gpsButton.classList.add('loading');
+            gpsButton.textContent = '⌛ GPS…';
+            gpsStatus.className = 'gps-status';
+            gpsStatus.textContent = 'Recherche de la position actuelle…';
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    const c = position.coords;
+                    pendingGeolocation = {
+                        latitude: Number(c.latitude),
+                        longitude: Number(c.longitude),
+                        accuracy: Number.isFinite(c.accuracy) ? Number(c.accuracy) : null,
+                        altitude: Number.isFinite(c.altitude) ? Number(c.altitude) : null,
+                        altitudeAccuracy: Number.isFinite(c.altitudeAccuracy) ? Number(c.altitudeAccuracy) : null,
+                        heading: Number.isFinite(c.heading) ? Number(c.heading) : null,
+                        speed: Number.isFinite(c.speed) ? Number(c.speed) : null,
+                        capturedAt: new Date(position.timestamp || Date.now()).toISOString(),
+                        source: 'operator-device'
+                    };
+                    gpsButton.classList.remove('loading');
+                    gpsButton.classList.add('ready');
+                    gpsButton.textContent = '✓ GPS prêt';
+                    gpsStatus.className = 'gps-status ok';
+                    const precision = pendingGeolocation.accuracy !== null ? ` — précision ± ${Math.round(pendingGeolocation.accuracy)} m` : '';
+                    gpsStatus.textContent = `${pendingGeolocation.latitude.toFixed(6)}, ${pendingGeolocation.longitude.toFixed(6)}${precision}`;
+                },
+                error => {
+                    const messages = {
+                        1: 'Autorisation de géolocalisation refusée.',
+                        2: 'Position indisponible. Vérifiez le GPS du téléphone.',
+                        3: 'Délai dépassé lors de la recherche GPS.'
+                    };
+                    resetPendingGps();
+                    gpsStatus.className = 'gps-status error';
+                    gpsStatus.textContent = messages[error.code] || 'Impossible d’obtenir la position.';
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        function gpsButtonHtml(gps) {
+            return gps ? '<button type="button" class="gps-indicator" title="Voir le point GPS" aria-label="Voir le point GPS">📍</button>' : '';
+        }
+
+        function openGpsModal(row) {
+            if (!row || !row._geolocation) return;
+            currentGpsRow = row;
+            const g = row._geolocation;
+            const lines = [
+                `<strong>Latitude :</strong> ${Number(g.latitude).toFixed(7)}`,
+                `<strong>Longitude :</strong> ${Number(g.longitude).toFixed(7)}`,
+                `<strong>Précision :</strong> ${g.accuracy == null ? 'non fournie' : '± ' + Math.round(g.accuracy) + ' m'}`,
+                `<strong>Horodatage :</strong> ${g.capturedAt ? new Date(g.capturedAt).toLocaleString('fr-FR') : 'non fourni'}`
+            ];
+            if (g.altitude != null) lines.push(`<strong>Altitude :</strong> ${Number(g.altitude).toFixed(1)} m`);
+            if (g.speed != null) lines.push(`<strong>Vitesse :</strong> ${(Number(g.speed) * 3.6).toFixed(1)} km/h`);
+            if (g.heading != null) lines.push(`<strong>Cap :</strong> ${Math.round(Number(g.heading))}°`);
+            document.getElementById('gpsModalDetails').innerHTML = lines.join('<br>');
+            document.getElementById('gpsModal').style.display = 'flex';
+        }
+
+        function closeGpsModal() {
+            document.getElementById('gpsModal').style.display = 'none';
+            currentGpsRow = null;
+        }
+
+        function removeGpsFromCurrentRow() {
+            if (!currentGpsRow) return;
+            currentGpsRow._geolocation = null;
+            const cell = currentGpsRow.querySelector('.col-gps');
+            if (cell) cell.innerHTML = '';
+            closeGpsModal();
         }
 
         const phonetics = {
@@ -624,6 +814,8 @@
             const time = data ? data.heure : new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
             const type = data ? data.type : currentType;
             const contact = data ? data.contact : (currentType === 'Contact' ? '👥' : '');
+            const gps = data ? (data.geolocation || data.gps || null) : pendingGeolocation;
+            row._geolocation = gps ? JSON.parse(JSON.stringify(gps)) : null;
             let tClass = 't-obs';
             if(type === 'START') tClass = 't-start';
             if(type === 'STOP') tClass = 't-stop';
@@ -633,11 +825,15 @@
                 <td class="col-time">${time}</td>
                 <td class="col-type ${tClass}">${type}</td>
                 <td class="col-contact" onclick="toggleContact(event, this)">${contact}</td>
+                <td class="col-gps">${gpsButtonHtml(row._geolocation)}</td>
                 <td class="col-desc" onclick="openEditModal(this.parentElement)">${formatDisplay(val)}</td>
             `;
+            const gpsControl = row.querySelector('.gps-indicator');
+            if (gpsControl) gpsControl.addEventListener('click', event => { event.stopPropagation(); openGpsModal(row); });
             tableBody.prepend(row);
             if(!data) {
                 descInput.value = '';
+                resetPendingGps('Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.');
                 descInput.focus();
             }
         }
@@ -695,11 +891,20 @@
                     heure: tr.cells[0].innerText,
                     type: tr.cells[1].innerText,
                     contact: tr.cells[2].innerHTML,
-                    desc: cleanDesc
+                    desc: cleanDesc,
+                    geolocation: tr._geolocation ? JSON.parse(JSON.stringify(tr._geolocation)) : null
                 };
             });
             const surveillanceDate = isoToFrenchDate(sessionDateISO);
+            const operatorLabel = operatorInput.value.trim();
+            saveOperatorPreference();
             const sessionData = {
+                schemaVersion: 2,
+                application: 'HORUS - Surveillance Tactique Mobile',
+                operator: {
+                    label: operatorLabel,
+                    key: normalizeOperator(operatorLabel)
+                },
                 dateRaw: sessionDateISO,
                 date: surveillanceDate,
                 dateMission: `JOURNAL DE SURVEILLANCE DU ${surveillanceDate}`,
@@ -725,6 +930,10 @@
                     const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
                     // Pour les anciens fichiers sans métadonnée, la date du fichier est utilisée
                     // si elle est disponible ; sinon la date courante reste la valeur de repli.
+                    if (!Array.isArray(data) && data.operator) {
+                        operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
+                        saveOperatorPreference();
+                    }
                     if (importedDate) {
                         sessionDateISO = importedDate;
                     } else if (file.lastModified) {
@@ -740,7 +949,7 @@
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); closeModal(); }
+        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); closeModal(); }
 
         typeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -751,6 +960,9 @@
         });
 
         descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
+        operatorInput.addEventListener('change', saveOperatorPreference);
+        operatorInput.addEventListener('blur', saveOperatorPreference);
+        restoreOperatorPreference();
 
 
         let printOrderReversed = false;
