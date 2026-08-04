@@ -318,7 +318,56 @@
                 color: black !important;
             }
         }
-    </style>
+    
+
+        /* HORUS — Rapport PDF : colonnes aérées, marges de page inchangées */
+        @media print {
+            table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+            }
+
+            /* La colonne GPS (4) reste masquée : Heure, Type, Contact, Détails. */
+            thead th:nth-child(1), tbody td:nth-child(1) {
+                width: 70px !important;
+                min-width: 70px !important;
+                max-width: 70px !important;
+            }
+            thead th:nth-child(2), tbody td:nth-child(2) {
+                width: 90px !important;
+                min-width: 90px !important;
+                max-width: 90px !important;
+            }
+            thead th:nth-child(3), tbody td:nth-child(3) {
+                width: 35px !important;
+                min-width: 35px !important;
+                max-width: 35px !important;
+                text-align: center !important;
+            }
+            thead th:nth-child(5), tbody td:nth-child(5) {
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+            }
+
+            thead th {
+                padding: 8px 10px !important;
+                white-space: nowrap !important;
+                vertical-align: middle !important;
+            }
+            tbody td {
+                padding: 8px 10px !important;
+                vertical-align: middle !important;
+                line-height: 1.25 !important;
+            }
+            thead th:nth-child(1), tbody td:nth-child(1) { padding-left: 9px !important; padding-right: 11px !important; }
+            thead th:nth-child(2), tbody td:nth-child(2) { padding-left: 11px !important; padding-right: 11px !important; }
+            thead th:nth-child(3), tbody td:nth-child(3) { padding-left: 6px !important; padding-right: 6px !important; }
+            thead th:nth-child(5), tbody td:nth-child(5) { padding-left: 12px !important; }
+        }
+
+</style>
 </head>
 <body>
     <section class="print-report-header" aria-hidden="true">
