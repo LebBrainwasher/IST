@@ -991,7 +991,9 @@
                 return `${clean.slice(0, 2)}-${clean.slice(2, 5)}-${clean.slice(5, 7)}`;
             }
             if (/^[0-9]+[A-Z]+[0-9]+$/.test(clean)) {
-                return clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3');
+                // En interne, une plaque FNI issue de la commande vocale reste compacte.
+                // Le visuel « plaque » réintroduit ensuite les espaces à l'affichage.
+                return clean;
             }
             return clean;
         }
