@@ -625,6 +625,10 @@
             <h3 style="margin-top:0; font-size: 1rem;">Point de géolocalisation</h3>
             <div id="gpsModalDetails" class="gps-details"></div>
             <div class="modal-buttons">
+                <button class="btn-modal" style="background:#2563eb" onclick="openCurrentGpsMap('google')">Google Maps</button>
+                <button class="btn-modal" style="background:#047857" onclick="openCurrentGpsMap('osm')">OpenStreetMap</button>
+            </div>
+            <div class="modal-buttons">
                 <button class="btn-modal" style="background:#555" onclick="closeGpsModal()">Fermer</button>
                 <button class="btn-modal" style="background:var(--danger)" onclick="removeGpsFromCurrentRow()">Retirer le point</button>
             </div>
@@ -766,6 +770,25 @@
             currentGpsRow = null;
         }
 
+        function openCurrentGpsMap(service) {
+            if (!currentGpsRow || !currentGpsRow._geolocation) return;
+            const g = currentGpsRow._geolocation;
+            const latitude = Number(g.latitude);
+            const longitude = Number(g.longitude);
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+            const serviceName = service === 'osm' ? 'OpenStreetMap' : 'Google Maps';
+            const accepted = window.confirm(
+                `Cette action va transmettre les seules coordonnées sélectionnées à ${serviceName}. Continuer ?`
+            );
+            if (!accepted) return;
+
+            const url = service === 'osm'
+                ? `https://www.openstreetmap.org/?mlat=${encodeURIComponent(latitude)}&mlon=${encodeURIComponent(longitude)}#map=18/${encodeURIComponent(latitude)}/${encodeURIComponent(longitude)}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(latitude + ',' + longitude)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
         function removeGpsFromCurrentRow() {
             if (!currentGpsRow) return;
             currentGpsRow._geolocation = null;
@@ -855,9 +878,40 @@
             return finalOutput.replace(/->/g, "→").replace(/<-/g, "←");
         }
 
+        const dictatedTypePrefixes = [
+            { pattern: /^(?:START|DÉPART|DEPART)\b\s*[:;,.\-]?\s*/i, type: 'START' },
+            { pattern: /^(?:STOP|ARRÊT|ARRET)\b\s*[:;,.\-]?\s*/i, type: 'STOP' },
+            { pattern: /^(?:OBS|OBSERVATION)\b\s*[:;,.\-]?\s*/i, type: 'Observation' },
+            { pattern: /^(?:CONT|CONTACT)\b\s*[:;,.\-]?\s*/i, type: 'Contact' },
+            { pattern: /^(?:DIR|DIRECTION|CHGT\s+DIRECTION|CHANGEMENT\s+DE\s+DIRECTION)\b\s*[:;,.\-]?\s*/i, type: 'Chgt Direction' }
+        ];
+
+        function parseDictatedType(text) {
+            const source = String(text || '').trimStart();
+            for (const item of dictatedTypePrefixes) {
+                const match = source.match(item.pattern);
+                if (match) {
+                    return { type: item.type, text: source.slice(match[0].length).trimStart() };
+                }
+            }
+            return { type: null, text: String(text || '').trim() };
+        }
+
+        function selectType(type) {
+            currentType = type;
+            typeBtns.forEach(button => button.classList.toggle('active', button.dataset.type === type));
+        }
+
+        function previewDictatedType() {
+            const parsed = parseDictatedType(descInput.value);
+            if (parsed.type) selectType(parsed.type);
+        }
+
         function addEntry(data = null) {
-            const val = data ? data.desc : descInput.value.trim();
+            const parsed = data ? null : parseDictatedType(descInput.value);
+            const val = data ? data.desc : parsed.text;
             if (!val && !data) return;
+            if (!data && parsed.type) selectType(parsed.type);
             const row = document.createElement('tr');
             row.dataset.rawDesc = val;
             const time = data ? data.heure : new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
@@ -999,6 +1053,8 @@
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
         function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); closeModal(); }
+
+        descInput.addEventListener('input', previewDictatedType);
 
         typeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
