@@ -181,11 +181,12 @@
 
         .operator-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
             gap: 6px;
             align-items: end;
             margin-bottom: 8px;
         }
+        .operator-field { min-width: 0; }
         .operator-field label {
             display: block;
             margin: 0 0 4px 2px;
@@ -195,15 +196,15 @@
             letter-spacing: .06em;
             text-transform: uppercase;
         }
-        .operator-field input { padding: 9px 10px; font-size: .85rem; }
+        .operator-field input { padding: 9px 8px; font-size: .78rem; min-width: 0; }
         .gps-btn {
             min-height: 38px;
-            padding: 0 11px;
+            padding: 0 9px;
             border: 1px solid #455a64;
             border-radius: 6px;
             background: #263238;
             color: #e5e7eb;
-            font-size: .72rem;
+            font-size: .68rem;
             font-weight: 800;
             white-space: nowrap;
         }
@@ -469,7 +470,7 @@
                 position: static;
             }
             #logTable thead th {
-                font-size: .72rem;
+                font-size: .68rem;
                 font-weight: 800;
             }
             #logTable tbody .col-time {
@@ -502,7 +503,7 @@
             display: block;
             margin-bottom: 5px;
             color: #cbd5e1;
-            font-size: .72rem;
+            font-size: .68rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: .05em;
@@ -518,6 +519,15 @@
             box-sizing: border-box;
         }
 
+</style>
+
+<style id="horus-meta-export-style">
+.horus-meta-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.72)}
+.horus-meta-overlay.open{display:flex}.horus-meta-dialog{width:min(520px,100%);background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden}
+.horus-meta-head{padding:16px 18px;border-bottom:1px solid #30363d}.horus-meta-head h3{margin:0;font-size:1rem}.horus-meta-head p{margin:6px 0 0;color:#9aa4af;font-size:.76rem;line-height:1.45}
+.horus-meta-body{padding:16px 18px;display:grid;gap:13px}.horus-meta-field label{display:block;margin-bottom:5px;color:#aeb7c2;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.horus-meta-field input{width:100%;border:1px solid #3a4552;background:#0f141a;color:#fff;border-radius:10px;padding:11px 12px;font:inherit;outline:none}.horus-meta-field input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.17)}
+.horus-meta-note{font-size:.7rem;line-height:1.45;color:#9aa4af;border:1px solid #30363d;background:#111820;border-radius:10px;padding:10px 11px}.horus-meta-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:14px 18px;border-top:1px solid #30363d}.horus-meta-btn{border:1px solid #3a4552;border-radius:9px;padding:9px 12px;font:inherit;font-size:.73rem;font-weight:800;cursor:pointer;background:#222b35;color:#e6edf3}.horus-meta-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}.horus-meta-btn.warning{background:#7c5a10;border-color:#9a7014;color:#fff}
+@media(max-width:560px){.horus-meta-actions{display:grid;grid-template-columns:1fr}.horus-meta-btn{width:100%;min-height:42px}}
 </style>
 </head>
 <body>
@@ -712,6 +722,10 @@
                 <label for="operatorInput">Identifiant opérateur</label>
                 <input type="text" id="operatorInput" placeholder="Ex. Équipe 1 / Alpha" autocomplete="off">
             </div>
+            <div class="operator-field">
+                <label for="pvInput">Référence PV</label>
+                <input type="text" id="pvInput" placeholder="Ex. PV 01234/2026" autocomplete="off">
+            </div>
             <button type="button" id="gpsButton" class="gps-btn" onclick="capturePosition()">📍 Position</button>
         </div>
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
@@ -812,6 +826,7 @@
         const descInput = document.getElementById('descInput');
         const typeBtns = document.querySelectorAll('.type-btn');
         const operatorInput = document.getElementById('operatorInput');
+        const pvInput = document.getElementById('pvInput');
         const gpsButton = document.getElementById('gpsButton');
         const gpsStatus = document.getElementById('gpsStatus');
         let currentType = 'Observation';
@@ -842,12 +857,17 @@
                 .toUpperCase().replace(/[^A-Z0-9]+/g, '').trim();
         }
 
+        function normalizePvReference(value) {
+            return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase().replace(/^\s*PV\s*/,'').replace(/[^A-Z0-9]+/g,'').trim();
+        }
+
         function saveOperatorPreference() {
-            try { localStorage.setItem('horusOperatorLabel', operatorInput.value.trim()); } catch (_) {}
+            try { localStorage.setItem('horusOperatorLabel', operatorInput.value.trim()); localStorage.setItem('horusPvLabel', pvInput.value.trim()); } catch (_) {}
         }
 
         function restoreOperatorPreference() {
-            try { operatorInput.value = localStorage.getItem('horusOperatorLabel') || ''; } catch (_) {}
+            try { operatorInput.value = localStorage.getItem('horusOperatorLabel') || ''; pvInput.value = localStorage.getItem('horusPvLabel') || ''; } catch (_) {}
         }
 
         function resetPendingGps(message = 'Aucune position associée à la prochaine entrée.') {
@@ -1218,7 +1238,7 @@
 
         function triggerFile() { document.getElementById('fileInput').click(); }
 
-        function exportJSON() {
+        function exportJSONDirect() {
             const rows = Array.from(document.querySelectorAll("tbody tr")).reverse().map(tr => {
                 // Pour l'export, on convertit la description "radio" en description "texte clair"
                 // Cela permet à la version bureau de lire correctement les données sans modification
@@ -1238,6 +1258,8 @@
             const sessionData = {
                 schemaVersion: 2,
                 application: 'HORUS - Surveillance Tactique Mobile',
+                pvLabel: pvInput.value.trim(),
+                pvKey: normalizePvReference(pvInput.value.trim()),
                 operator: {
                     label: operatorLabel,
                     key: normalizeOperator(operatorLabel)
@@ -1271,6 +1293,10 @@
                         operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
                         saveOperatorPreference();
                     }
+                    if (!Array.isArray(data)) {
+                        pvInput.value = String(data.pvLabel || data.referencePV || data.pv || '').trim();
+                        saveOperatorPreference();
+                    }
                     if (importedDate) {
                         sessionDateISO = importedDate;
                     } else if (file.lastModified) {
@@ -1301,6 +1327,8 @@
         descInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addEntry(); });
         operatorInput.addEventListener('change', saveOperatorPreference);
         operatorInput.addEventListener('blur', saveOperatorPreference);
+        pvInput.addEventListener('change', saveOperatorPreference);
+        pvInput.addEventListener('blur', saveOperatorPreference);
         restoreOperatorPreference();
 
 
@@ -1333,5 +1361,37 @@
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
     </script>
+
+<div id="horusMetaExportModal" class="horus-meta-overlay" role="dialog" aria-modal="true" aria-labelledby="horusMetaTitle">
+  <div class="horus-meta-dialog">
+    <div class="horus-meta-head"><h3 id="horusMetaTitle">Informations de classement incomplètes</h3><p>Ces renseignements facilitent le regroupement ultérieur des surveillances dans l’Analyseur de récurrences. Ils restent absents des rapports PDF et CSV.</p></div>
+    <div class="horus-meta-body">
+      <div class="horus-meta-field"><label for="horusMetaPv">Référence PV / numéro de procédure</label><input id="horusMetaPv" type="text" placeholder="Ex. PV 01234/2026" autocomplete="off"></div>
+      <div class="horus-meta-field"><label for="horusMetaOperator">Identifiant opérateur</label><input id="horusMetaOperator" type="text" placeholder="Ex. Équipe 1 / Alpha" autocomplete="off"></div>
+      <div class="horus-meta-note">L’export reste possible sans compléter ces champs. L’Analyseur de récurrences pourra les demander ultérieurement.</div>
+    </div>
+    <div class="horus-meta-actions"><button type="button" class="horus-meta-btn" id="horusMetaCancel">Annuler</button><button type="button" class="horus-meta-btn warning" id="horusMetaSkip">Exporter sans compléter</button><button type="button" class="horus-meta-btn primary" id="horusMetaSave">Compléter et exporter</button></div>
+  </div>
+</div>
+
+<script id="horus-meta-export-script">
+(function(){
+ const modal=document.getElementById('horusMetaExportModal'), pv=document.getElementById('horusMetaPv'), op=document.getElementById('horusMetaOperator');
+ let bypass=false;
+ function close(){modal.classList.remove('open')}
+ window.exportJSON=function(){
+   if(bypass){bypass=false;return exportJSONDirect()}
+   const pvVal=(pvInput?.value||'').trim(), opVal=(operatorInput?.value||'').trim();
+   if(pvVal && opVal) return exportJSONDirect();
+   pv.value=pvVal; op.value=opVal; modal.classList.add('open'); setTimeout(()=>{(!pvVal?pv:op).focus()},30);
+ };
+ document.getElementById('horusMetaCancel').onclick=close;
+ document.getElementById('horusMetaSkip').onclick=function(){close();bypass=true;window.exportJSON()};
+ document.getElementById('horusMetaSave').onclick=function(){
+   pvInput.value=pv.value.trim(); operatorInput.value=op.value.trim(); saveOperatorPreference(); close(); bypass=true; window.exportJSON();
+ };
+ modal.addEventListener('click',e=>{if(e.target===modal)close()});
+})();
+</script>
 </body>
 </html>
