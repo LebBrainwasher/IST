@@ -839,7 +839,8 @@
                     cleanPlate = cleanPlate.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3');
                 }
                 
-                return parts[0] + trigger + " " + cleanPlate;
+                // Le mot-clé vocal sert uniquement de déclencheur : il n'est pas exporté.
+                return (parts[0] + " " + cleanPlate).replace(/\s+/g, " ").trim();
             }
             
             // Si pas de trigger, on traite quand même les flèches et phonétique basique
@@ -864,7 +865,8 @@
                 const startIdx = normalized.indexOf(trigger);
                 const prefix = text.substring(0, startIdx);
                 const platePart = text.substring(startIdx + trigger.length);
-                return prefix + "<strong>IMMATRICULATION :</strong> " + processPhonetic(platePart);
+                // Le mot-clé vocal est masqué, mais la plaque reste visible et mise en forme.
+                return prefix + processPhonetic(platePart);
             }
             const words = text.split(/(\s+)/);
             const formattedWords = words.map(word => {
