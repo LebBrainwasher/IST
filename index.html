@@ -240,6 +240,94 @@
         }
         .gps-details strong { color: #93c5fd; }
 
+
+        /* Affichage mobile : un événement sur deux lignes, sans défilement horizontal */
+        @media screen {
+            .log-container {
+                overflow-x: hidden;
+            }
+            #logTable,
+            #logTable thead,
+            #logTable tbody {
+                display: block;
+                width: 100%;
+            }
+            #logTable thead tr,
+            #logTable tbody tr {
+                display: grid;
+                grid-template-columns: 68px minmax(82px, 1fr) 32px 32px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            #logTable thead tr {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: #161616;
+                border-bottom: 1px solid #333;
+            }
+            #logTable thead th {
+                position: static;
+                width: auto;
+                min-width: 0;
+                padding: 7px 5px;
+                border-bottom: 0;
+                box-sizing: border-box;
+                text-align: left;
+            }
+            #logTable thead th:nth-child(3),
+            #logTable thead th:nth-child(4) {
+                text-align: center;
+            }
+            #logTable thead th:nth-child(5) {
+                display: none;
+            }
+            #logTable tbody tr {
+                border-bottom: 1px solid #262626;
+                padding: 0;
+            }
+            #logTable tbody td {
+                width: auto;
+                min-width: 0;
+                box-sizing: border-box;
+                border-bottom: 0;
+                padding: 8px 5px 5px;
+                align-self: center;
+            }
+            #logTable tbody .col-time {
+                width: auto;
+                white-space: nowrap;
+            }
+            #logTable tbody .col-type {
+                width: auto;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #logTable tbody .col-contact,
+            #logTable tbody .col-gps {
+                width: auto;
+                text-align: center;
+            }
+            #logTable tbody .col-desc {
+                grid-column: 1 / -1;
+                width: 100%;
+                padding: 4px 12px 11px;
+                font-size: .91rem;
+                line-height: 1.38;
+                overflow-wrap: anywhere;
+                word-break: normal;
+            }
+            #logTable tbody .plate-tag {
+                max-width: 100%;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                font-size: .86rem;
+                letter-spacing: .035em;
+                vertical-align: baseline;
+            }
+        }
+
         .print-report-header { display: none; }
         .print-logo-wrap { display: none; }
 
@@ -816,36 +904,81 @@
             return `<span class="plate-tag">${clean}</span>`;
         }
 
-        // Cette fonction convertit le langage radio en texte simple (utile pour l'export bureau)
-        function cleanPhoneticForExport(rawContent) {
-            let text = rawContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-            const trigger = "IMMATRICULATION :";
-            
-            if (text.includes(trigger)) {
-                const parts = text.split(trigger);
-                let platePart = parts[1].trim();
-                
-                // Conversion alphabet radio
-                Object.keys(phonetics).forEach(word => {
-                    const regex = new RegExp('(^|\\s|[^A-Z0-9])' + word + '($|\\s|[^A-Z0-9])', 'g');
-                    platePart = platePart.replace(regex, '$1' + phonetics[word] + '$2');
-                });
-                
-                // Nettoyage final de la plaque
-                let cleanPlate = platePart.replace(/[^A-Z0-9]/g, '');
-                if (cleanPlate.length === 7 && /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(cleanPlate)) {
-                    cleanPlate = `${cleanPlate.slice(0,2)}-${cleanPlate.slice(2,5)}-${cleanPlate.slice(5,7)}`;
-                } else if (/^[0-9]+[A-Z]+[0-9]+$/.test(cleanPlate)) {
-                    cleanPlate = cleanPlate.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3');
-                }
-                
-                // Le mot-clé vocal sert uniquement de déclencheur : il n'est pas exporté.
-                return (parts[0] + " " + cleanPlate).replace(/\s+/g, " ").trim();
+        function normalizeToken(token) {
+            return String(token || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/^[^A-Z0-9]+|[^A-Z0-9-]+$/g, '');
+        }
+
+        function formatPlatePlain(compact) {
+            const clean = String(compact || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(clean)) {
+                return `${clean.slice(0, 2)}-${clean.slice(2, 5)}-${clean.slice(5, 7)}`;
             }
-            
-            // Si pas de trigger, on traite quand même les flèches et phonétique basique
-            let processed = rawContent.replace(/->/g, "→").replace(/<-/g, "←");
-            return processed;
+            if (/^[0-9]+[A-Z]+[0-9]+$/.test(clean)) {
+                return clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3');
+            }
+            return clean;
+        }
+
+        /*
+         * Le mot-clé « IMMATRICULATION : » déclenche uniquement la conversion
+         * des éléments phonétiques qui suivent. Le parseur s'arrête dès que la
+         * plaque SIV est complète ou au premier mot qui n'appartient pas à la plaque.
+         * Le reste de la phrase est conservé sans modification.
+         */
+        function parseImmatriculationCommand(rawContent) {
+            const source = String(rawContent || '');
+            const trigger = /IMMATRICULATION\s*:\s*/i;
+            const match = trigger.exec(source);
+            if (!match) return source;
+
+            const prefix = source.slice(0, match.index).trimEnd();
+            const tail = source.slice(match.index + match[0].length);
+            const tokens = Array.from(tail.matchAll(/\S+/g));
+            let compact = '';
+            let consumed = 0;
+
+            for (let i = 0; i < tokens.length; i += 1) {
+                const originalToken = tokens[i][0];
+                const normalizedToken = normalizeToken(originalToken);
+                let contribution = '';
+
+                if (Object.prototype.hasOwnProperty.call(phonetics, normalizedToken)) {
+                    contribution = phonetics[normalizedToken];
+                } else if (/^[0-9]+$/.test(normalizedToken)) {
+                    contribution = normalizedToken;
+                } else if (/^[A-Z]{2}-?[0-9]{3}-?[A-Z]{2}$/.test(normalizedToken)) {
+                    contribution = normalizedToken.replace(/-/g, '');
+                } else {
+                    break;
+                }
+
+                compact += contribution;
+                consumed = i + 1;
+
+                // Une plaque SIV complète doit arrêter immédiatement la lecture,
+                // afin de ne jamais absorber les mots suivants de la phrase.
+                if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(compact)) break;
+            }
+
+            if (!compact || consumed === 0) {
+                return [prefix, tail.trimStart()].filter(Boolean).join(' ').trim();
+            }
+
+            const plate = formatPlatePlain(compact);
+            const remainderStart = consumed < tokens.length ? tokens[consumed].index : tail.length;
+            const remainder = tail.slice(remainderStart).trimStart();
+            return [prefix, plate, remainder].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        // Conversion destinée à l'export et à la sauvegarde du texte nettoyé.
+        function cleanPhoneticForExport(rawContent) {
+            return parseImmatriculationCommand(rawContent)
+                .replace(/->/g, '→')
+                .replace(/<-/g, '←');
         }
 
         function processPhonetic(rawContent) {
@@ -859,25 +992,16 @@
 
         function formatDisplay(text) {
             if (!text) return "";
-            const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-            const trigger = "IMMATRICULATION :";
-            if (normalized.includes(trigger)) {
-                const startIdx = normalized.indexOf(trigger);
-                const prefix = text.substring(0, startIdx);
-                const platePart = text.substring(startIdx + trigger.length);
-                // Le mot-clé vocal est masqué, mais la plaque reste visible et mise en forme.
-                return prefix + processPhonetic(platePart);
-            }
-            const words = text.split(/(\s+)/);
+            const cleanedText = parseImmatriculationCommand(text);
+            const words = cleanedText.split(/(\s+)/);
             const formattedWords = words.map(word => {
-                let testWord = word.toUpperCase().replace(/-/g, '').trim();
+                const testWord = word.toUpperCase().replace(/-/g, '').trim();
                 const isSiv = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(testWord);
                 const isFni = /^[0-9]+[A-Z]+[0-9]+$/.test(testWord);
                 if (isSiv || isFni) return applyPlateStyle(word);
                 return word;
             });
-            let finalOutput = formattedWords.join("");
-            return finalOutput.replace(/->/g, "→").replace(/<-/g, "←");
+            return formattedWords.join("").replace(/->/g, "→").replace(/<-/g, "←");
         }
 
         const dictatedTypePrefixes = [
@@ -911,7 +1035,7 @@
 
         function addEntry(data = null) {
             const parsed = data ? null : parseDictatedType(descInput.value);
-            const val = data ? data.desc : parsed.text;
+            const val = parseImmatriculationCommand(data ? data.desc : parsed.text);
             if (!val && !data) return;
             if (!data && parsed.type) selectType(parsed.type);
             const row = document.createElement('tr');
@@ -960,7 +1084,7 @@
 
         function saveCurrentLine() {
             if(currentRowToEdit) {
-                const newText = document.getElementById('editInput').value;
+                const newText = parseImmatriculationCommand(document.getElementById('editInput').value);
                 currentRowToEdit.dataset.rawDesc = newText;
                 currentRowToEdit.querySelector('.col-desc').innerHTML = formatDisplay(newText);
                 closeEditModal();
