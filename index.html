@@ -1013,7 +1013,87 @@
             mediaCaptureInput.click();
         }
 
-        function handleCapturedPhoto(event) {
+        function isHeicLike(fileOrItem) {
+            const name = String(fileOrItem && (fileOrItem.name || fileOrItem.fileName) || '').toLowerCase();
+            const type = String(fileOrItem && (fileOrItem.type || fileOrItem.fileType) || '').toLowerCase();
+            return /\.(heic|heif)$/i.test(name) || type.includes('heic') || type.includes('heif');
+        }
+
+        function revokePreviewOnly(item) {
+            if (item && item._previewUrl) {
+                try { URL.revokeObjectURL(item._previewUrl); } catch (_) {}
+            }
+            item._previewUrl = null;
+            item._previewBlob = null;
+        }
+
+        function loadImageFromBlob(blob, timeoutMs = 3500) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                let finished = false;
+                const done = (ok, value) => {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timer);
+                    try { URL.revokeObjectURL(url); } catch (_) {}
+                    ok ? resolve(value) : reject(value);
+                };
+                const timer = setTimeout(() => done(false, new Error('Décodage image trop long')), timeoutMs);
+                img.onload = () => done(true, img);
+                img.onerror = () => done(false, new Error('Format non décodable par ce navigateur'));
+                img.src = url;
+            });
+        }
+
+        async function prepareMediaPreview(item) {
+            if (!item || !item._file) return false;
+
+            item._previewPreparing = true;
+            item._previewUnavailable = false;
+            item.previewFormat = '';
+
+            // Pour les formats courants, on conserve l'affichage natif.
+            if (!isHeicLike(item)) {
+                revokePreviewOnly(item);
+                item._previewUrl = URL.createObjectURL(item._file);
+                item.previewFormat = 'native';
+                item._previewPreparing = false;
+                return true;
+            }
+
+            // HEIC / HEIF : le fichier original reste toujours dans item._file.
+            // On tente uniquement de fabriquer localement un JPEG d'aperçu lorsque
+            // le moteur du navigateur sait décoder le HEIC/HEIF.
+            try {
+                const img = await loadImageFromBlob(item._file);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const jpegBlob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Conversion JPEG impossible')), 'image/jpeg', 0.90);
+                });
+
+                revokePreviewOnly(item);
+                item._previewBlob = jpegBlob;
+                item._previewUrl = URL.createObjectURL(jpegBlob);
+                item.previewFormat = 'jpeg-preview';
+                item._previewPreparing = false;
+                return true;
+            } catch (err) {
+                revokePreviewOnly(item);
+                item._previewUnavailable = true;
+                item.previewFormat = 'original-heic-preserved';
+                item._previewPreparing = false;
+                console.warn('Aperçu HEIC/HEIF indisponible :', err);
+                return false;
+            }
+        }
+
+        async function handleCapturedPhoto(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) {
                 mediaCaptureTriggeredAt = null;
@@ -1025,17 +1105,30 @@
                 triggeredAt: mediaCaptureTriggeredAt || new Date().toISOString(),
                 selectedAt: new Date().toISOString(),
                 fileName: file.name || '',
-                fileType: file.type || 'image/*',
+                fileType: file.type || (isHeicLike(file) ? 'image/heic' : 'image/*'),
                 fileSize: Number(file.size || 0),
                 lastModified: Number(file.lastModified || 0),
                 source: 'operator-device-camera',
+                originalFormat: isHeicLike(file) ? 'HEIC/HEIF' : (file.type || 'image'),
                 _file: file,
-                _previewUrl: URL.createObjectURL(file)
+                _previewUrl: null
             };
             pendingMedia.push(item);
             mediaCaptureTriggeredAt = null;
+
             mediaButton.classList.add('ready');
-            mediaButton.textContent = pendingMedia.length > 1 ? `✓ 📷 ×${pendingMedia.length}` : '✓ Photo prête';
+            mediaButton.textContent = isHeicLike(item)
+                ? '⌛ Préparation HEIC…'
+                : (pendingMedia.length > 1 ? `✓ 📷 ×${pendingMedia.length}` : '✓ Photo prête');
+
+            await prepareMediaPreview(item);
+
+            mediaButton.textContent = pendingMedia.length > 1
+                ? `✓ 📷 ×${pendingMedia.length}`
+                : (isHeicLike(item)
+                    ? (item._previewUrl ? '✓ HEIC prêt' : '✓ HEIC conservé')
+                    : '✓ Photo prête');
+            updateArchiveStatus();
             descInput.focus();
         }
 
@@ -1053,14 +1146,24 @@
             const first = list[0];
             const when = first.triggeredAt ? new Date(first.triggeredAt).toLocaleString('fr-FR') : 'non renseigné';
             const size = first.fileSize ? `${Math.round(first.fileSize/1024)} Ko` : 'non renseignée';
+            const formatLabel = isHeicLike(first) ? 'HEIC / HEIF' : (first.fileType || 'image');
             document.getElementById('mediaModalDetails').innerHTML =
                 `<strong>Photo(s) déclarée(s) :</strong> ${list.length}<br>`+
                 `<strong>Déclenchement :</strong> ${when}<br>`+
-                `<strong>Fichier :</strong> ${first.fileName || 'nom non disponible'}<br>`+
-                `<strong>Taille :</strong> ${size}`;
+                `<strong>Fichier original :</strong> ${first.fileName || 'nom non disponible'}<br>`+
+                `<strong>Format :</strong> ${formatLabel}<br>`+
+                `<strong>Taille :</strong> ${size}`+
+                (isHeicLike(first) ? `<br><strong>Archive :</strong> original HEIC/HEIF conservé intact` : '');
             const wrap = document.getElementById('mediaPreviewWrap');
             if (first._previewUrl) {
-                wrap.innerHTML = `<img class="media-preview" src="${first._previewUrl}" alt="Aperçu du cliché">`;
+                wrap.innerHTML = `<img class="media-preview" src="${first._previewUrl}" alt="Aperçu du cliché">`+
+                    (first.previewFormat === 'jpeg-preview'
+                        ? '<p style="font-size:.68rem;color:#9ca3af;margin:8px 0 0;">Aperçu JPEG généré localement. Le fichier HEIC/HEIF original reste celui exporté dans l’archive HORUS.</p>'
+                        : '');
+            } else if (first._previewPreparing) {
+                wrap.innerHTML = '<p style="font-size:.75rem;color:#9ca3af;margin:12px 0 0;">Préparation de l’aperçu en cours…</p>';
+            } else if (isHeicLike(first) && first._file) {
+                wrap.innerHTML = '<p style="font-size:.75rem;color:#f59e0b;margin:12px 0 0;"><strong>HEIC/HEIF conservé.</strong><br>Ce navigateur ne sait pas décoder ce fichier pour l’aperçu. Le média original sera néanmoins conservé et exporté dans l’archive HORUS.</p>';
             } else {
                 wrap.innerHTML = '<p style="font-size:.75rem;color:#9ca3af;margin:12px 0 0;">Le média est déclaré dans le JSON mais le fichier image n’est pas chargé dans cette session.</p>';
             }
@@ -1083,7 +1186,9 @@
                 fileType: item.fileType || '',
                 fileSize: Number(item.fileSize || 0),
                 lastModified: Number(item.lastModified || 0),
-                source: item.source || 'operator-device-camera'
+                source: item.source || 'operator-device-camera',
+                originalFormat: item.originalFormat || (isHeicLike(item) ? 'HEIC/HEIF' : ''),
+                previewFormat: item.previewFormat || ''
             }));
         }
 
@@ -1420,6 +1525,7 @@
                         if (item) {
                             item._file = null;
                             item._previewUrl = null;
+                            item._previewBlob = null;
                             item.archivePath = null;
                         }
                     });
@@ -1448,6 +1554,7 @@
             if (type.includes('jpeg')) return '.jpg';
             if (type.includes('png')) return '.png';
             if (type.includes('heic')) return '.heic';
+            if (type.includes('heif')) return '.heif';
             if (type.includes('webp')) return '.webp';
             if (type.includes('mp4')) return '.mp4';
             if (type.includes('quicktime')) return '.mov';
@@ -1644,8 +1751,16 @@
                         const path=copy.archivePath || (copy.id ? Array.from(archiveEntries.keys()).find(k=>k.startsWith(`MEDIAS/${copy.id}.`)) : null);
                         if(path && archiveEntries.has(path)) {
                             const bytes=archiveEntries.get(path);
-                            const blob=new Blob([bytes],{type:copy.fileType||'application/octet-stream'});
-                            copy._file=blob; copy._previewUrl=URL.createObjectURL(blob); copy.fileName=copy.fileName||path.split('/').pop(); copy.archivePath=path;
+                            const inferredName=copy.fileName||path.split('/').pop();
+                            const inferredType=copy.fileType || (/\.hei[cf]$/i.test(inferredName) ? 'image/heic' : 'application/octet-stream');
+                            const blob=new Blob([bytes],{type:inferredType});
+                            copy._file=blob;
+                            copy._previewUrl=null;
+                            copy.fileName=inferredName;
+                            copy.fileType=inferredType;
+                            copy.archivePath=path;
+                            copy.originalFormat=copy.originalFormat || (isHeicLike(copy) ? 'HEIC/HEIF' : '');
+                            setTimeout(()=>prepareMediaPreview(copy).then(()=>updateArchiveStatus()),0);
                         }
                         return copy;
                     });
