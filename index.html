@@ -1389,6 +1389,16 @@
         }
 
         function confirmDelete() {
+            const mediaCount = currentRowToEdit && Array.isArray(currentRowToEdit._media)
+                ? currentRowToEdit._media.length
+                : 0;
+            const confirmBox = document.getElementById('deleteConfirm');
+            const message = confirmBox ? confirmBox.querySelector('p') : null;
+            if (message) {
+                message.textContent = mediaCount
+                    ? `Supprimer cet événement ? ${mediaCount} média${mediaCount > 1 ? 's' : ''} associé${mediaCount > 1 ? 's' : ''} sera${mediaCount > 1 ? 'ont' : ''} également supprimé${mediaCount > 1 ? 's' : ''} et ne sera${mediaCount > 1 ? 'ont' : ''} plus exporté${mediaCount > 1 ? 's' : ''}.`
+                    : 'Supprimer cet événement ?';
+            }
             document.getElementById('editActions').style.display = 'none';
             document.getElementById('deleteConfirm').style.display = 'flex';
         }
@@ -1400,7 +1410,30 @@
 
         function executeDelete() {
             if(currentRowToEdit) {
+                // Supprimer exclusivement les médias rattachés à CET événement.
+                // Les médias des autres lignes ne sont jamais parcourus ni modifiés.
+                if (Array.isArray(currentRowToEdit._media)) {
+                    currentRowToEdit._media.forEach(item => {
+                        if (item && item._previewUrl) {
+                            try { URL.revokeObjectURL(item._previewUrl); } catch (_) {}
+                        }
+                        if (item) {
+                            item._file = null;
+                            item._previewUrl = null;
+                            item.archivePath = null;
+                        }
+                    });
+                    currentRowToEdit._media.length = 0;
+                }
+
+                if (currentMediaRow === currentRowToEdit) {
+                    try { closeMediaModal(); } catch (_) {}
+                    currentMediaRow = null;
+                }
+
                 currentRowToEdit.remove();
+                currentRowToEdit = null;
+                updateArchiveStatus();
                 closeEditModal();
             }
         }
