@@ -897,6 +897,21 @@
         // Date effective de la surveillance, indépendante de la date d'impression.
         let sessionDateISO = new Date().toISOString().slice(0, 10);
 
+        // HORUS — Stabilisation du format de surveillance.
+        // sessionId identifie définitivement une surveillance.
+        // eventId identifie définitivement chaque événement, même après export/import.
+        function createHorusId(prefix) {
+            try {
+                if (crypto && typeof crypto.randomUUID === 'function') {
+                    return `${prefix}-${crypto.randomUUID()}`;
+                }
+            } catch (_) {}
+            const random = Math.random().toString(36).slice(2, 12);
+            return `${prefix}-${Date.now().toString(36)}-${random}`;
+        }
+
+        let sessionId = createHorusId('SES');
+
         function isoToFrenchDate(isoDate) {
             const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate || '');
             return match ? `${match[3]}/${match[2]}/${match[1]}` : new Date().toLocaleDateString('fr-FR');
@@ -1418,6 +1433,7 @@
             if (!data && parsed.type) selectType(parsed.type);
             const row = document.createElement('tr');
             row.dataset.rawDesc = val;
+            row.dataset.eventId = (data && data.eventId) ? String(data.eventId) : createHorusId('EVT');
             const time = data ? data.heure : new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
             const type = data ? data.type : currentType;
             const contact = data ? data.contact : (currentType === 'Contact' ? '👥' : '');
@@ -1570,7 +1586,11 @@
                     else if (item.archivePath) clean.archivePath = item.archivePath;
                     return clean;
                 });
+                // Les anciens événements importés sans eventId reçoivent ici
+                // un identifiant une seule fois, ensuite conservé à chaque réexport.
+                if (!tr.dataset.eventId) tr.dataset.eventId = createHorusId('EVT');
                 return {
+                    eventId: tr.dataset.eventId,
                     heure: tr.cells[0].innerText,
                     type: tr.cells[1].innerText,
                     contact: tr.cells[2].innerHTML,
@@ -1583,7 +1603,9 @@
             const operatorLabel = operatorInput.value.trim();
             saveOperatorPreference();
             return {
-                schemaVersion: 3,
+                schemaVersion: 4,
+                horusFormat: 'HORUS_SURVEILLANCE',
+                sessionId: sessionId,
                 application: 'HORUS - Surveillance Tactique Mobile',
                 packageType: forArchive ? 'HORUS_SURVEILLANCE_ARCHIVE' : 'HORUS_SURVEILLANCE_JSON',
                 pvLabel: pvInput.value.trim(),
@@ -1819,6 +1841,13 @@
             const logs = data.logs || data;
             const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
 
+            // Un fichier HORUS stabilisé conserve son sessionId.
+            // Un ancien JSON/ZIP sans sessionId est automatiquement migré :
+            // il reçoit un identifiant qui sera ensuite présent au prochain export.
+            sessionId = (!Array.isArray(data) && data.sessionId)
+                ? String(data.sessionId)
+                : createHorusId('SES');
+
             if (!Array.isArray(data) && data.operator) {
                 operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
                 saveOperatorPreference();
@@ -1900,6 +1929,7 @@
             revokeAllMediaUrls();
             tableBody.innerHTML = '';
             sessionDateISO = new Date().toISOString().slice(0, 10);
+            sessionId = createHorusId('SES');
             clearSavedSessionIdentity();
             resetPendingGps();
             resetPendingMedia();
