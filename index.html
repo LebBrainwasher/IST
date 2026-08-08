@@ -181,7 +181,7 @@
 
         .operator-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
             gap: 6px;
             align-items: end;
             margin-bottom: 8px;
@@ -210,6 +210,38 @@
         }
         .gps-btn.loading { background: #37474f; color: #ffcc80; }
         .gps-btn.ready { background: #14532d; border-color: #22c55e; color: #dcfce7; }
+        .media-btn {
+            min-height: 38px;
+            padding: 0 9px;
+            border: 1px solid #455a64;
+            border-radius: 6px;
+            background: #263238;
+            color: #e5e7eb;
+            font-size: .68rem;
+            font-weight: 800;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .media-btn.ready { background: #4a2b0a; border-color: #f59e0b; color: #fef3c7; }
+        .col-media { width: 28px; text-align: center; }
+        .media-indicator {
+            border: 0;
+            background: transparent;
+            color: #fbbf24;
+            padding: 3px;
+            font-size: .95rem;
+            cursor: pointer;
+        }
+        .media-preview {
+            display:block;
+            width:100%;
+            max-height:52vh;
+            object-fit:contain;
+            border-radius:8px;
+            margin:10px 0;
+            background:#111;
+        }
+        .media-details { text-align:left; color:#d1d5db; font-size:.76rem; line-height:1.5; }
         .gps-status {
             min-height: 18px;
             margin: -2px 0 7px 1px;
@@ -256,7 +288,7 @@
             #logTable thead tr,
             #logTable tbody tr {
                 display: grid;
-                grid-template-columns: 68px minmax(82px, 1fr) 32px 32px;
+                grid-template-columns: 68px minmax(76px, 1fr) 32px 32px 32px;
                 width: 100%;
                 box-sizing: border-box;
             }
@@ -277,10 +309,11 @@
                 text-align: left;
             }
             #logTable thead th:nth-child(3),
-            #logTable thead th:nth-child(4) {
+            #logTable thead th:nth-child(4),
+            #logTable thead th:nth-child(5) {
                 text-align: center;
             }
-            #logTable thead th:nth-child(5) {
+            #logTable thead th:nth-child(6) {
                 display: none;
             }
             #logTable tbody tr {
@@ -306,7 +339,8 @@
                 white-space: nowrap;
             }
             #logTable tbody .col-contact,
-            #logTable tbody .col-gps {
+            #logTable tbody .col-gps,
+            #logTable tbody .col-media {
                 width: auto;
                 text-align: center;
             }
@@ -335,7 +369,7 @@
         @media print {
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .input-zone, .action-bar, header, .type-switcher, .desc-row, #fileInput,
-            .modal, th.col-gps, td.col-gps { display: none !important; }
+            .modal, th.col-gps, td.col-gps, th.col-media, td.col-media { display: none !important; }
             body {
                 background: white !important;
                 color: black !important;
@@ -434,7 +468,7 @@
                 max-width: 35px !important;
                 text-align: center !important;
             }
-            thead th:nth-child(5), tbody td:nth-child(5) {
+            thead th:nth-child(6), tbody td:nth-child(6) {
                 width: auto !important;
                 min-width: 0 !important;
                 max-width: none !important;
@@ -453,7 +487,7 @@
             thead th:nth-child(1), tbody td:nth-child(1) { padding-left: 9px !important; padding-right: 11px !important; }
             thead th:nth-child(2), tbody td:nth-child(2) { padding-left: 11px !important; padding-right: 11px !important; }
             thead th:nth-child(3), tbody td:nth-child(3) { padding-left: 6px !important; padding-right: 6px !important; }
-            thead th:nth-child(5), tbody td:nth-child(5) { padding-left: 12px !important; }
+            thead th:nth-child(6), tbody td:nth-child(6) { padding-left: 12px !important; }
         }
 
 
@@ -480,7 +514,8 @@
                 font-size: .80rem;
             }
             #logTable tbody .col-contact,
-            #logTable tbody .col-gps {
+            #logTable tbody .col-gps,
+            #logTable tbody .col-media {
                 min-height: 42px;
                 padding-top: 7px;
                 padding-bottom: 7px;
@@ -488,7 +523,8 @@
                 cursor: pointer;
                 touch-action: manipulation;
             }
-            #logTable tbody .gps-indicator {
+            #logTable tbody .gps-indicator,
+            #logTable tbody .media-indicator {
                 min-width: 38px;
                 min-height: 38px;
                 font-size: 1.05rem;
@@ -727,6 +763,7 @@
                 <input type="text" id="pvInput" placeholder="Ex. PV 01234/2026" autocomplete="off">
             </div>
             <button type="button" id="gpsButton" class="gps-btn" onclick="capturePosition()">📍 Position</button>
+            <button type="button" id="mediaButton" class="media-btn" onclick="capturePhoto()">📷 Photo</button>
         </div>
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div class="type-switcher" id="typeSwitcher">
@@ -750,6 +787,7 @@
                     <th>Type</th>
                     <th>👥</th>
                     <th class="col-gps">📍</th>
+                    <th class="col-media">📷</th>
                     <th>Détails</th>
                 </tr>
             </thead>
@@ -765,6 +803,7 @@
     </div>
 
     <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
+    <input type="file" id="mediaCaptureInput" style="display:none" accept="image/*" capture="environment" onchange="handleCapturedPhoto(event)">
 
     <div id="editModal" class="modal">
         <div class="modal-content">
@@ -810,6 +849,18 @@
         </div>
     </div>
 
+
+    <div id="mediaModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; font-size:1rem;">Média associé à l'événement</h3>
+            <div id="mediaModalDetails" class="media-details"></div>
+            <div id="mediaPreviewWrap"></div>
+            <div class="modal-buttons">
+                <button class="btn-modal" style="background:#555" onclick="closeMediaModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size: 1rem;">Effacer tout ?</h3>
@@ -829,10 +880,15 @@
         const pvInput = document.getElementById('pvInput');
         const gpsButton = document.getElementById('gpsButton');
         const gpsStatus = document.getElementById('gpsStatus');
+        const mediaButton = document.getElementById('mediaButton');
+        const mediaCaptureInput = document.getElementById('mediaCaptureInput');
         let currentType = 'Observation';
         let currentRowToEdit = null;
         let currentGpsRow = null;
+        let currentMediaRow = null;
         let pendingGeolocation = null;
+        let pendingMedia = [];
+        let mediaCaptureTriggeredAt = null;
         // Date effective de la surveillance, indépendante de la date d'impression.
         let sessionDateISO = new Date().toISOString().slice(0, 10);
 
@@ -923,6 +979,92 @@
                 },
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
+        }
+
+        function resetPendingMedia() {
+            pendingMedia = [];
+            mediaCaptureTriggeredAt = null;
+            mediaButton.classList.remove('ready');
+            mediaButton.textContent = '📷 Photo';
+        }
+
+        function capturePhoto() {
+            mediaCaptureTriggeredAt = new Date().toISOString();
+            mediaCaptureInput.value = '';
+            mediaCaptureInput.click();
+        }
+
+        function handleCapturedPhoto(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                mediaCaptureTriggeredAt = null;
+                return;
+            }
+            const item = {
+                id: `MED-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
+                kind: 'photo',
+                triggeredAt: mediaCaptureTriggeredAt || new Date().toISOString(),
+                selectedAt: new Date().toISOString(),
+                fileName: file.name || '',
+                fileType: file.type || 'image/*',
+                fileSize: Number(file.size || 0),
+                lastModified: Number(file.lastModified || 0),
+                source: 'operator-device-camera',
+                _previewUrl: URL.createObjectURL(file)
+            };
+            pendingMedia.push(item);
+            mediaCaptureTriggeredAt = null;
+            mediaButton.classList.add('ready');
+            mediaButton.textContent = pendingMedia.length > 1 ? `✓ 📷 ×${pendingMedia.length}` : '✓ Photo prête';
+            descInput.focus();
+        }
+
+        function mediaButtonHtml(media) {
+            const list = Array.isArray(media) ? media : (media ? [media] : []);
+            if (!list.length) return '';
+            const count = list.length > 1 ? `×${list.length}` : '';
+            return `<button type="button" class="media-indicator" title="${list.length} photo(s) déclarée(s)" aria-label="Consulter le média">📷${count}</button>`;
+        }
+
+        function openMediaModal(row) {
+            if (!row || !Array.isArray(row._media) || !row._media.length) return;
+            currentMediaRow = row;
+            const list = row._media;
+            const first = list[0];
+            const when = first.triggeredAt ? new Date(first.triggeredAt).toLocaleString('fr-FR') : 'non renseigné';
+            const size = first.fileSize ? `${Math.round(first.fileSize/1024)} Ko` : 'non renseignée';
+            document.getElementById('mediaModalDetails').innerHTML =
+                `<strong>Photo(s) déclarée(s) :</strong> ${list.length}<br>`+
+                `<strong>Déclenchement :</strong> ${when}<br>`+
+                `<strong>Fichier :</strong> ${first.fileName || 'nom non disponible'}<br>`+
+                `<strong>Taille :</strong> ${size}`;
+            const wrap = document.getElementById('mediaPreviewWrap');
+            if (first._previewUrl) {
+                wrap.innerHTML = `<img class="media-preview" src="${first._previewUrl}" alt="Aperçu du cliché">`;
+            } else {
+                wrap.innerHTML = '<p style="font-size:.75rem;color:#9ca3af;margin:12px 0 0;">Le média est déclaré dans le JSON mais le fichier image n’est pas chargé dans cette session.</p>';
+            }
+            document.getElementById('mediaModal').style.display = 'flex';
+        }
+
+        function closeMediaModal() {
+            document.getElementById('mediaModal').style.display = 'none';
+            currentMediaRow = null;
+        }
+
+        function serializableMedia(media) {
+            const list = Array.isArray(media) ? media : [];
+            return list.map(item => ({
+                id: item.id || '',
+                kind: item.kind || 'photo',
+                triggeredAt: item.triggeredAt || null,
+                selectedAt: item.selectedAt || null,
+                fileName: item.fileName || '',
+                fileType: item.fileType || '',
+                fileSize: Number(item.fileSize || 0),
+                lastModified: Number(item.lastModified || 0),
+                source: item.source || 'operator-device-camera'
+            }));
         }
 
         function gpsButtonHtml(gps) {
@@ -1155,7 +1297,9 @@
             const type = data ? data.type : currentType;
             const contact = data ? data.contact : (currentType === 'Contact' ? '👥' : '');
             const gps = data ? (data.geolocation || data.gps || null) : pendingGeolocation;
+            const media = data ? (data.media || data.medias || []) : pendingMedia;
             row._geolocation = gps ? JSON.parse(JSON.stringify(gps)) : null;
+            row._media = Array.isArray(media) ? media.map(item => ({...item})) : (media ? [{...media}] : []);
             let tClass = 't-obs';
             if(type === 'START') tClass = 't-start';
             if(type === 'STOP') tClass = 't-stop';
@@ -1166,14 +1310,18 @@
                 <td class="col-type ${tClass}">${type}</td>
                 <td class="col-contact" onclick="toggleContact(event, this)">${contact}</td>
                 <td class="col-gps">${gpsButtonHtml(row._geolocation)}</td>
+                <td class="col-media">${mediaButtonHtml(row._media)}</td>
                 <td class="col-desc" onclick="openEditModal(this.parentElement)">${formatDisplay(val)}</td>
             `;
             const gpsControl = row.querySelector('.gps-indicator');
             if (gpsControl) gpsControl.addEventListener('click', event => { event.stopPropagation(); openGpsModal(row); });
+            const mediaControl = row.querySelector('.media-indicator');
+            if (mediaControl) mediaControl.addEventListener('click', event => { event.stopPropagation(); openMediaModal(row); });
             tableBody.prepend(row);
             if(!data) {
                 descInput.value = '';
-                resetPendingGps('Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.');
+                resetPendingGps(row._geolocation ? 'Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.' : 'Aucune position associée à la prochaine entrée.');
+                resetPendingMedia();
                 descInput.focus();
             }
         }
@@ -1249,7 +1397,8 @@
                     type: tr.cells[1].innerText,
                     contact: tr.cells[2].innerHTML,
                     desc: cleanDesc,
-                    geolocation: tr._geolocation ? JSON.parse(JSON.stringify(tr._geolocation)) : null
+                    geolocation: tr._geolocation ? JSON.parse(JSON.stringify(tr._geolocation)) : null,
+                    media: serializableMedia(tr._media)
                 };
             });
             const surveillanceDate = isoToFrenchDate(sessionDateISO);
@@ -1312,7 +1461,7 @@
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); closeModal(); }
+        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); resetPendingMedia(); closeModal(); }
 
         descInput.addEventListener('input', previewDictatedType);
 
