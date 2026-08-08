@@ -1728,9 +1728,97 @@
             return out;
         }
 
-        function applyImportedData(data, fileDate = null, archiveEntries = null) {
+        function inferMediaMimeType(fileName = '', declaredType = '') {
+            const declared = String(declaredType || '').trim().toLowerCase();
+            if (declared && declared !== 'application/octet-stream' && declared !== 'image/*') return declared;
+
+            const name = String(fileName || '').toLowerCase();
+            if (/\.jpe?g$/i.test(name)) return 'image/jpeg';
+            if (/\.png$/i.test(name)) return 'image/png';
+            if (/\.webp$/i.test(name)) return 'image/webp';
+            if (/\.gif$/i.test(name)) return 'image/gif';
+            if (/\.heic$/i.test(name)) return 'image/heic';
+            if (/\.heif$/i.test(name)) return 'image/heif';
+            if (/\.mp4$/i.test(name)) return 'video/mp4';
+            if (/\.mov$/i.test(name)) return 'video/quicktime';
+            return declaredType || 'application/octet-stream';
+        }
+
+        function findArchiveMediaPath(item, archiveEntries) {
+            if (!archiveEntries || !item) return null;
+
+            const keys = Array.from(archiveEntries.keys());
+            const normalizePath = value => String(value || '')
+                .replace(/\\/g, '/')
+                .replace(/^\.?\//, '')
+                .toLowerCase();
+
+            // 1. Priorité au chemin explicitement enregistré dans le JSON.
+            if (item.archivePath) {
+                const wanted = normalizePath(item.archivePath);
+                const exact = keys.find(k => normalizePath(k) === wanted);
+                if (exact) return exact;
+            }
+
+            // 2. Recherche par identifiant du média, indépendamment de la casse
+            //    et du nom exact du dossier MEDIAS.
+            if (item.id) {
+                const id = String(item.id).toLowerCase();
+                const byId = keys.find(k => {
+                    const normalized = normalizePath(k);
+                    const base = normalized.split('/').pop() || '';
+                    return normalized.includes('/medias/') || normalized.startsWith('medias/')
+                        ? base.startsWith(id.toLowerCase() + '.')
+                        : false;
+                });
+                if (byId) return byId;
+            }
+
+            // 3. Dernier recours : nom de fichier d'origine.
+            if (item.fileName) {
+                const wantedName = String(item.fileName).toLowerCase();
+                const byName = keys.find(k => (normalizePath(k).split('/').pop() || '') === wantedName);
+                if (byName) return byName;
+            }
+
+            return null;
+        }
+
+        async function rebuildImportedMedia(item, archiveEntries) {
+            const copy = {...item};
+
+            if (!archiveEntries) return copy;
+
+            const path = findArchiveMediaPath(copy, archiveEntries);
+            if (!path || !archiveEntries.has(path)) return copy;
+
+            const bytes = archiveEntries.get(path);
+            const inferredName = copy.fileName || path.split('/').pop() || 'media';
+            const inferredType = inferMediaMimeType(inferredName, copy.fileType);
+            const blob = new Blob([bytes], {type: inferredType});
+
+            // Le Blob original du ZIP reste attaché au média de la session.
+            copy._file = blob;
+            copy._previewUrl = null;
+            copy._previewBlob = null;
+            copy.fileName = inferredName;
+            copy.fileType = inferredType;
+            copy.fileSize = Number(copy.fileSize || blob.size || 0);
+            copy.archivePath = path;
+            copy.originalFormat = copy.originalFormat || (isHeicLike(copy) ? 'HEIC/HEIF' : '');
+
+            // IMPORTANT : on attend la préparation de l'aperçu AVANT que addEntry()
+            // copie l'objet dans row._media. Ainsi _file et _previewUrl restent
+            // tous deux présents sur l'objet réellement conservé par la ligne.
+            await prepareMediaPreview(copy);
+
+            return copy;
+        }
+
+        async function applyImportedData(data, fileDate = null, archiveEntries = null) {
             const logs = data.logs || data;
             const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
+
             if (!Array.isArray(data) && data.operator) {
                 operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
                 saveOperatorPreference();
@@ -1739,34 +1827,36 @@
                 pvInput.value = String(data.pvLabel || data.referencePV || data.pv || '').trim();
                 saveOperatorPreference();
             }
+
             if (importedDate) sessionDateISO = importedDate;
             else if (fileDate) {
-                const d=new Date(fileDate); sessionDateISO=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const d = new Date(fileDate);
+                sessionDateISO = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
             }
-            tableBody.innerHTML='';
-            logs.forEach(log => {
-                if (archiveEntries && Array.isArray(log.media)) {
-                    log.media = log.media.map(item => {
-                        const copy={...item};
-                        const path=copy.archivePath || (copy.id ? Array.from(archiveEntries.keys()).find(k=>k.startsWith(`MEDIAS/${copy.id}.`)) : null);
-                        if(path && archiveEntries.has(path)) {
-                            const bytes=archiveEntries.get(path);
-                            const inferredName=copy.fileName||path.split('/').pop();
-                            const inferredType=copy.fileType || (/\.hei[cf]$/i.test(inferredName) ? 'image/heic' : 'application/octet-stream');
-                            const blob=new Blob([bytes],{type:inferredType});
-                            copy._file=blob;
-                            copy._previewUrl=null;
-                            copy.fileName=inferredName;
-                            copy.fileType=inferredType;
-                            copy.archivePath=path;
-                            copy.originalFormat=copy.originalFormat || (isHeicLike(copy) ? 'HEIC/HEIF' : '');
-                            setTimeout(()=>prepareMediaPreview(copy).then(()=>updateArchiveStatus()),0);
-                        }
-                        return copy;
-                    });
+
+            revokeAllMediaUrls();
+            tableBody.innerHTML = '';
+
+            for (const sourceLog of logs) {
+                // Ne pas modifier directement l'objet JSON importé.
+                const log = {...sourceLog};
+
+                const sourceMedia = Array.isArray(sourceLog.media)
+                    ? sourceLog.media
+                    : (Array.isArray(sourceLog.medias) ? sourceLog.medias : []);
+
+                if (sourceMedia.length) {
+                    log.media = [];
+                    for (const item of sourceMedia) {
+                        log.media.push(await rebuildImportedMedia(item, archiveEntries));
+                    }
+                } else {
+                    log.media = [];
                 }
+
                 addEntry(log);
-            });
+            }
+
             updateArchiveStatus();
         }
 
@@ -1779,11 +1869,11 @@
                     const jsonName=Array.from(entries.keys()).find(k=>k.toLowerCase().endsWith('.json'));
                     if(!jsonName) throw new Error('Aucun fichier JSON HORUS trouvé dans cette archive.');
                     const data=JSON.parse(new TextDecoder().decode(entries.get(jsonName)));
-                    applyImportedData(data,file.lastModified,entries);
+                    return applyImportedData(data,file.lastModified,entries);
                 }).catch(err=>alert('Import archive impossible : '+err.message));
             } else {
                 const reader=new FileReader();
-                reader.onload=e=>{try{applyImportedData(JSON.parse(e.target.result),file.lastModified,null)}catch(err){alert('Format invalide')}};
+                reader.onload=async e=>{try{await applyImportedData(JSON.parse(e.target.result),file.lastModified,null)}catch(err){alert('Format invalide')}};
                 reader.readAsText(file);
             }
             event.target.value='';
