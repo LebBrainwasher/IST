@@ -242,6 +242,9 @@
             background:#111;
         }
         .media-details { text-align:left; color:#d1d5db; font-size:.76rem; line-height:1.5; }
+        .archive-status { font-size:.68rem; color:#9ca3af; margin-top:5px; text-align:left; }
+        .archive-status strong { color:#fbbf24; }
+
         .gps-status {
             min-height: 18px;
             margin: -2px 0 7px 1px;
@@ -766,6 +769,7 @@
             <button type="button" id="mediaButton" class="media-btn" onclick="capturePhoto()">📷 Photo</button>
         </div>
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
+        <div id="archiveStatus" class="archive-status">Aucun média en attente d’export.</div>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
             <div class="type-btn" data-type="STOP">STOP</div>
@@ -796,13 +800,13 @@
     </div>
 
     <div class="action-bar">
-        <button class="btn-action b-save" onclick="exportJSON()">📤 Export</button>
-        <button class="btn-action b-load" onclick="triggerFile()">📥 Import</button>
+        <button class="btn-action b-save" onclick="exportJSON()">📦 Exporter</button>
+        <button class="btn-action b-load" onclick="triggerFile()">📥 Importer</button>
         <button class="btn-action b-pdf" onclick="printReport()">📄 PDF</button>
         <button class="btn-action b-clear" onclick="askClear()">🗑️ Reset</button>
     </div>
 
-    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
+    <input type="file" id="fileInput" style="display:none" accept=".json,.zip,application/json,application/zip" onchange="importJSON(event)">
     <input type="file" id="mediaCaptureInput" style="display:none" accept="image/*" capture="environment" onchange="handleCapturedPhoto(event)">
 
     <div id="editModal" class="modal">
@@ -882,6 +886,7 @@
         const gpsStatus = document.getElementById('gpsStatus');
         const mediaButton = document.getElementById('mediaButton');
         const mediaCaptureInput = document.getElementById('mediaCaptureInput');
+        const archiveStatus = document.getElementById('archiveStatus');
         let currentType = 'Observation';
         let currentRowToEdit = null;
         let currentGpsRow = null;
@@ -981,6 +986,20 @@
             );
         }
 
+        function getAllMediaItems() {
+            return Array.from(tableBody.querySelectorAll('tr')).flatMap(row => Array.isArray(row._media) ? row._media : []);
+        }
+
+        function updateArchiveStatus() {
+            const media = getAllMediaItems();
+            const available = media.filter(m => m && m._file).length;
+            if (!media.length) {
+                archiveStatus.textContent = 'Aucun média en attente d’export.';
+                return;
+            }
+            archiveStatus.innerHTML = `<strong>${media.length} média(s)</strong> déclaré(s) — ${available} fichier(s) actuellement disponible(s) dans cette session.`;
+        }
+
         function resetPendingMedia() {
             pendingMedia = [];
             mediaCaptureTriggeredAt = null;
@@ -1010,6 +1029,7 @@
                 fileSize: Number(file.size || 0),
                 lastModified: Number(file.lastModified || 0),
                 source: 'operator-device-camera',
+                _file: file,
                 _previewUrl: URL.createObjectURL(file)
             };
             pendingMedia.push(item);
@@ -1322,6 +1342,7 @@
                 descInput.value = '';
                 resetPendingGps(row._geolocation ? 'Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.' : 'Aucune position associée à la prochaine entrée.');
                 resetPendingMedia();
+                updateArchiveStatus();
                 descInput.focus();
             }
         }
@@ -1386,82 +1407,203 @@
 
         function triggerFile() { document.getElementById('fileInput').click(); }
 
-        function exportJSONDirect() {
-            const rows = Array.from(document.querySelectorAll("tbody tr")).reverse().map(tr => {
-                // Pour l'export, on convertit la description "radio" en description "texte clair"
-                // Cela permet à la version bureau de lire correctement les données sans modification
+        function extensionForMedia(item) {
+            const original = String(item.fileName || '');
+            const match = original.match(/\.([A-Za-z0-9]{1,8})$/);
+            if (match) return '.' + match[1].toLowerCase();
+            const type = String(item.fileType || '');
+            if (type.includes('jpeg')) return '.jpg';
+            if (type.includes('png')) return '.png';
+            if (type.includes('heic')) return '.heic';
+            if (type.includes('webp')) return '.webp';
+            if (type.includes('mp4')) return '.mp4';
+            if (type.includes('quicktime')) return '.mov';
+            return item.kind === 'video' ? '.mp4' : '.jpg';
+        }
+
+        function buildSessionData(forArchive = false) {
+            const rows = Array.from(document.querySelectorAll('tbody tr')).reverse().map(tr => {
                 const cleanDesc = cleanPhoneticForExport(tr.dataset.rawDesc);
-                
+                const mediaList = (Array.isArray(tr._media) ? tr._media : []).map(item => {
+                    const clean = serializableMedia([item])[0];
+                    if (forArchive && item._file) clean.archivePath = `MEDIAS/${item.id}${extensionForMedia(item)}`;
+                    else if (item.archivePath) clean.archivePath = item.archivePath;
+                    return clean;
+                });
                 return {
                     heure: tr.cells[0].innerText,
                     type: tr.cells[1].innerText,
                     contact: tr.cells[2].innerHTML,
                     desc: cleanDesc,
                     geolocation: tr._geolocation ? JSON.parse(JSON.stringify(tr._geolocation)) : null,
-                    media: serializableMedia(tr._media)
+                    media: mediaList
                 };
             });
             const surveillanceDate = isoToFrenchDate(sessionDateISO);
             const operatorLabel = operatorInput.value.trim();
             saveOperatorPreference();
-            const sessionData = {
-                schemaVersion: 2,
+            return {
+                schemaVersion: 3,
                 application: 'HORUS - Surveillance Tactique Mobile',
+                packageType: forArchive ? 'HORUS_SURVEILLANCE_ARCHIVE' : 'HORUS_SURVEILLANCE_JSON',
                 pvLabel: pvInput.value.trim(),
                 pvKey: normalizePvReference(pvInput.value.trim()),
-                operator: {
-                    label: operatorLabel,
-                    key: normalizeOperator(operatorLabel)
-                },
+                operator: { label: operatorLabel, key: normalizeOperator(operatorLabel) },
                 dateRaw: sessionDateISO,
                 date: surveillanceDate,
                 dateMission: `JOURNAL DE SURVEILLANCE DU ${surveillanceDate}`,
                 logs: rows
             };
-            const blob = new Blob([JSON.stringify(sessionData, null, 2)], {type: "application/json"});
-            const dateStr = surveillanceDate.replace(/\//g, '-');
+        }
 
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `Surveillance_Tactique_${dateStr}.json`;
-            a.click();
+        function downloadBlob(blob, filename) {
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }
+
+        function exportJSONOnlyDirect() {
+            const data = buildSessionData(false);
+            const dateStr = data.date.replace(/\//g, '-');
+            downloadBlob(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `Surveillance_Tactique_${dateStr}.json`);
+        }
+
+        // ZIP minimal non compressé (méthode STORE), volontairement autonome et sans dépendance réseau.
+        const ZIP_CRC_TABLE = (() => {
+            const t = new Uint32Array(256);
+            for (let n=0;n<256;n++) { let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; }
+            return t;
+        })();
+        function crc32(bytes) {
+            let c=0xFFFFFFFF;
+            for (let i=0;i<bytes.length;i++) c=ZIP_CRC_TABLE[(c^bytes[i])&255]^(c>>>8);
+            return (c^0xFFFFFFFF)>>>0;
+        }
+        function u16(v){const b=new Uint8Array(2);new DataView(b.buffer).setUint16(0,v,true);return b}
+        function u32(v){const b=new Uint8Array(4);new DataView(b.buffer).setUint32(0,v>>>0,true);return b}
+        function concatBytes(parts){let n=parts.reduce((a,b)=>a+b.length,0),o=new Uint8Array(n),p=0;for(const b of parts){o.set(b,p);p+=b.length}return o}
+        function dosDateTime(date=new Date()) {
+            let y=Math.max(1980,date.getFullYear());
+            return {time:((date.getHours()&31)<<11)|((date.getMinutes()&63)<<5)|((Math.floor(date.getSeconds()/2))&31), date:(((y-1980)&127)<<9)|(((date.getMonth()+1)&15)<<5)|(date.getDate()&31)};
+        }
+        async function createStoreZip(entries) {
+            const enc=new TextEncoder(), localParts=[], centralParts=[]; let offset=0;
+            for (const entry of entries) {
+                const name=enc.encode(entry.name); const data=entry.data instanceof Uint8Array?entry.data:new Uint8Array(entry.data);
+                const crc=crc32(data), dt=dosDateTime(entry.date||new Date());
+                const local=concatBytes([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(dt.time),u16(dt.date),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);
+                localParts.push(local,data);
+                const central=concatBytes([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(dt.time),u16(dt.date),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]);
+                centralParts.push(central); offset += local.length + data.length;
+            }
+            const central=concatBytes(centralParts), locals=concatBytes(localParts);
+            const eocd=concatBytes([u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),u32(central.length),u32(locals.length),u16(0)]);
+            return new Blob([locals,central,eocd],{type:'application/zip'});
+        }
+
+        async function exportArchiveDirect() {
+            const media = getAllMediaItems();
+            const physical = media.filter(m => m && m._file);
+            if (!physical.length) return exportJSONOnlyDirect();
+            const data = buildSessionData(true);
+            const entries=[];
+            const jsonName=`Surveillance_Tactique_${data.date.replace(/\//g,'-')}.json`;
+            entries.push({name:jsonName,data:new TextEncoder().encode(JSON.stringify(data,null,2))});
+            for (const item of physical) {
+                const path=`MEDIAS/${item.id}${extensionForMedia(item)}`;
+                const bytes=new Uint8Array(await item._file.arrayBuffer());
+                entries.push({name:path,data:bytes,date:item.lastModified?new Date(item.lastModified):new Date()});
+            }
+            const zip=await createStoreZip(entries);
+            downloadBlob(zip,`HORUS_Surveillance_${data.date.replace(/\//g,'-')}.zip`);
+        }
+
+        function exportJSONDirect() {
+            // Le bouton principal produit une archive complète dès qu’un média physique est disponible.
+            // Sans média, il conserve le comportement JSON historique.
+            return exportArchiveDirect();
+        }
+
+        function findEocd(bytes) {
+            for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--) if(new DataView(bytes.buffer,bytes.byteOffset+i,4).getUint32(0,true)===0x06054b50) return i;
+            return -1;
+        }
+        function parseStoreZip(bytes) {
+            const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength), dec=new TextDecoder();
+            const e=findEocd(bytes); if(e<0) throw new Error('Archive ZIP invalide');
+            const count=dv.getUint16(e+10,true), centralOffset=dv.getUint32(e+16,true); let p=centralOffset; const out=new Map();
+            for(let i=0;i<count;i++) {
+                if(dv.getUint32(p,true)!==0x02014b50) throw new Error('Répertoire ZIP invalide');
+                const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), usize=dv.getUint32(p+24,true);
+                const nlen=dv.getUint16(p+28,true), xlen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true), localOffset=dv.getUint32(p+42,true);
+                const name=dec.decode(bytes.slice(p+46,p+46+nlen));
+                if(method!==0) throw new Error('Cette archive utilise une compression non prise en charge par ce prototype HORUS.');
+                if(dv.getUint32(localOffset,true)!==0x04034b50) throw new Error('Entrée ZIP invalide');
+                const ln=dv.getUint16(localOffset+26,true), lx=dv.getUint16(localOffset+28,true), start=localOffset+30+ln+lx;
+                out.set(name,bytes.slice(start,start+csize));
+                p += 46+nlen+xlen+clen;
+            }
+            return out;
+        }
+
+        function applyImportedData(data, fileDate = null, archiveEntries = null) {
+            const logs = data.logs || data;
+            const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
+            if (!Array.isArray(data) && data.operator) {
+                operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
+                saveOperatorPreference();
+            }
+            if (!Array.isArray(data)) {
+                pvInput.value = String(data.pvLabel || data.referencePV || data.pv || '').trim();
+                saveOperatorPreference();
+            }
+            if (importedDate) sessionDateISO = importedDate;
+            else if (fileDate) {
+                const d=new Date(fileDate); sessionDateISO=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            }
+            tableBody.innerHTML='';
+            logs.forEach(log => {
+                if (archiveEntries && Array.isArray(log.media)) {
+                    log.media = log.media.map(item => {
+                        const copy={...item};
+                        const path=copy.archivePath || (copy.id ? Array.from(archiveEntries.keys()).find(k=>k.startsWith(`MEDIAS/${copy.id}.`)) : null);
+                        if(path && archiveEntries.has(path)) {
+                            const bytes=archiveEntries.get(path);
+                            const blob=new Blob([bytes],{type:copy.fileType||'application/octet-stream'});
+                            copy._file=blob; copy._previewUrl=URL.createObjectURL(blob); copy.fileName=copy.fileName||path.split('/').pop(); copy.archivePath=path;
+                        }
+                        return copy;
+                    });
+                }
+                addEntry(log);
+            });
+            updateArchiveStatus();
         }
 
         function importJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    const logs = data.logs || data;
-                    const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
-                    // Pour les anciens fichiers sans métadonnée, la date du fichier est utilisée
-                    // si elle est disponible ; sinon la date courante reste la valeur de repli.
-                    if (!Array.isArray(data) && data.operator) {
-                        operatorInput.value = typeof data.operator === 'string' ? data.operator : (data.operator.label || '');
-                        saveOperatorPreference();
-                    }
-                    if (!Array.isArray(data)) {
-                        pvInput.value = String(data.pvLabel || data.referencePV || data.pv || '').trim();
-                        saveOperatorPreference();
-                    }
-                    if (importedDate) {
-                        sessionDateISO = importedDate;
-                    } else if (file.lastModified) {
-                        const fileDate = new Date(file.lastModified);
-                        sessionDateISO = `${fileDate.getFullYear()}-${String(fileDate.getMonth()+1).padStart(2,'0')}-${String(fileDate.getDate()).padStart(2,'0')}`;
-                    }
-                    tableBody.innerHTML = "";
-                    logs.forEach(l => addEntry(l));
-                } catch(err) { alert("Format invalide"); }
-            };
-            reader.readAsText(file);
+            const file=event.target.files && event.target.files[0]; if(!file) return;
+            const lower=String(file.name||'').toLowerCase();
+            if(lower.endsWith('.zip')) {
+                file.arrayBuffer().then(buf => {
+                    const entries=parseStoreZip(new Uint8Array(buf));
+                    const jsonName=Array.from(entries.keys()).find(k=>k.toLowerCase().endsWith('.json'));
+                    if(!jsonName) throw new Error('Aucun fichier JSON HORUS trouvé dans cette archive.');
+                    const data=JSON.parse(new TextDecoder().decode(entries.get(jsonName)));
+                    applyImportedData(data,file.lastModified,entries);
+                }).catch(err=>alert('Import archive impossible : '+err.message));
+            } else {
+                const reader=new FileReader();
+                reader.onload=e=>{try{applyImportedData(JSON.parse(e.target.result),file.lastModified,null)}catch(err){alert('Format invalide')}};
+                reader.readAsText(file);
+            }
+            event.target.value='';
         }
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); resetPendingMedia(); closeModal(); }
+        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); resetPendingMedia(); updateArchiveStatus(); closeModal(); }
 
         descInput.addEventListener('input', previewDictatedType);
 
@@ -1479,6 +1621,10 @@
         pvInput.addEventListener('change', saveOperatorPreference);
         pvInput.addEventListener('blur', saveOperatorPreference);
         restoreOperatorPreference();
+        updateArchiveStatus();
+        window.addEventListener('beforeunload', (e) => {
+            if (getAllMediaItems().some(m => m && m._file)) { e.preventDefault(); e.returnValue = ''; }
+        });
 
 
         let printOrderReversed = false;
@@ -1513,7 +1659,7 @@
 
 <div id="horusMetaExportModal" class="horus-meta-overlay" role="dialog" aria-modal="true" aria-labelledby="horusMetaTitle">
   <div class="horus-meta-dialog">
-    <div class="horus-meta-head"><h3 id="horusMetaTitle">Informations de classement incomplètes</h3><p>Ces renseignements facilitent le regroupement ultérieur des surveillances dans l’Analyseur de récurrences. Ils restent absents des rapports PDF et CSV.</p></div>
+    <div class="horus-meta-head"><h3 id="horusMetaTitle">Informations de classement incomplètes</h3><p>Ces renseignements facilitent le regroupement ultérieur des surveillances. Ils restent absents du rapport PDF. Si des clichés sont présents, l’export produit une archive HORUS contenant le JSON et les médias.</p></div>
     <div class="horus-meta-body">
       <div class="horus-meta-field"><label for="horusMetaPv">Référence PV / numéro de procédure</label><input id="horusMetaPv" type="text" placeholder="Ex. PV 01234/2026" autocomplete="off"></div>
       <div class="horus-meta-field"><label for="horusMetaOperator">Identifiant opérateur</label><input id="horusMetaOperator" type="text" placeholder="Ex. Équipe 1 / Alpha" autocomplete="off"></div>
