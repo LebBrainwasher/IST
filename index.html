@@ -1456,18 +1456,52 @@
             };
         }
 
-        function downloadBlob(blob, filename) {
-            const a = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 30000);
+        function exportTimeSuffix() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`;
         }
 
-        function exportJSONOnlyDirect() {
+        function isIOSChrome() {
+            return /CriOS/i.test(navigator.userAgent || '');
+        }
+
+        function fallbackDownloadBlob(blob, filename) {
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                try { a.remove(); } catch (_) {}
+                URL.revokeObjectURL(url);
+            }, 60000);
+        }
+
+        async function saveExportBlob(blob, filename) {
+            // Sur Chrome iOS, le téléchargement d'un Blob via <a download> peut être irrégulier.
+            // On privilégie donc la feuille de partage iOS lorsqu'elle accepte les fichiers.
+            try {
+                const file = new File([blob], filename, { type: blob.type || 'application/octet-stream', lastModified: Date.now() });
+                const sharePayload = { files: [file], title: 'Export HORUS' };
+                if (isIOSChrome() && navigator.share && (!navigator.canShare || navigator.canShare(sharePayload))) {
+                    await navigator.share(sharePayload);
+                    return true;
+                }
+            } catch (err) {
+                // Annulation utilisateur ou indisponibilité : on retombe sur le téléchargement classique.
+                if (err && err.name === 'AbortError') return false;
+            }
+            fallbackDownloadBlob(blob, filename);
+            return true;
+        }
+
+        async function exportJSONOnlyDirect() {
             const data = buildSessionData(false);
             const dateStr = data.date.replace(/\//g, '-');
-            downloadBlob(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), `Surveillance_Tactique_${dateStr}.json`);
+            const filename = `Surveillance_Tactique_${dateStr}_${exportTimeSuffix()}.json`;
+            await saveExportBlob(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), filename);
         }
 
         // ZIP minimal non compressé (méthode STORE), volontairement autonome et sans dépendance réseau.
@@ -1517,13 +1551,19 @@
                 entries.push({name:path,data:bytes,date:item.lastModified?new Date(item.lastModified):new Date()});
             }
             const zip=await createStoreZip(entries);
-            downloadBlob(zip,`HORUS_Surveillance_${data.date.replace(/\//g,'-')}.zip`);
+            const filename=`HORUS_Surveillance_${data.date.replace(/\//g,'-')}_${exportTimeSuffix()}.zip`;
+            await saveExportBlob(zip,filename);
         }
 
-        function exportJSONDirect() {
+        async function exportJSONDirect() {
             // Le bouton principal produit une archive complète dès qu’un média physique est disponible.
             // Sans média, il conserve le comportement JSON historique.
-            return exportArchiveDirect();
+            try {
+                return await exportArchiveDirect();
+            } catch (err) {
+                console.error('Export HORUS impossible', err);
+                alert('Export impossible : ' + (err && err.message ? err.message : 'erreur inconnue'));
+            }
         }
 
         function findEocd(bytes) {
@@ -1603,7 +1643,37 @@
 
         function askClear() { document.getElementById('confirmModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-        function doClear() { tableBody.innerHTML = ""; sessionDateISO = new Date().toISOString().slice(0, 10); resetPendingGps(); resetPendingMedia(); updateArchiveStatus(); closeModal(); }
+        function clearSavedSessionIdentity() {
+            try {
+                localStorage.removeItem('horusOperatorLabel');
+                localStorage.removeItem('horusPvLabel');
+            } catch (_) {}
+            operatorInput.value = '';
+            pvInput.value = '';
+        }
+        function revokeAllMediaUrls() {
+            getAllMediaItems().forEach(item => {
+                if (item && item._previewUrl) {
+                    try { URL.revokeObjectURL(item._previewUrl); } catch (_) {}
+                }
+            });
+        }
+        function doClear() {
+            revokeAllMediaUrls();
+            tableBody.innerHTML = '';
+            sessionDateISO = new Date().toISOString().slice(0, 10);
+            clearSavedSessionIdentity();
+            resetPendingGps();
+            resetPendingMedia();
+            mediaCaptureInput.value = '';
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.value = '';
+            descInput.value = '';
+            currentMediaRow = null;
+            updateArchiveStatus();
+            closeModal();
+            descInput.focus();
+        }
 
         descInput.addEventListener('input', previewDictatedType);
 
