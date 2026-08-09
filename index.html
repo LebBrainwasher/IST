@@ -912,6 +912,74 @@
 
         let sessionId = createHorusId('SES');
 
+        // ============================================================
+        // HORUS SURVEILLANCE v1 — CONTRAT DE FORMAT FIGÉ
+        // ============================================================
+        // Ces constantes constituent le contrat d'échange commun entre
+        // Mobile, Bureau et Analyseur. Ne pas modifier la signification
+        // des champs existants dans une future version : ajouter plutôt
+        // un nouveau numéro de format et une migration explicite.
+        const HORUS_SURVEILLANCE_FORMAT = 'HORUS_SURVEILLANCE';
+        const HORUS_SURVEILLANCE_FORMAT_VERSION = 1;
+        const HORUS_SURVEILLANCE_SCHEMA_VERSION = 4;
+
+        function inspectHorusSurveillanceFile(data) {
+            // Compatibilité historique : les toutes premières sauvegardes
+            // pouvaient être un simple tableau de logs.
+            if (Array.isArray(data)) {
+                return {compatible:true, legacy:true, message:'Ancien journal HORUS compatible'};
+            }
+
+            if (!data || typeof data !== 'object') {
+                return {compatible:false, reason:'Le fichier ne contient pas un objet HORUS valide.'};
+            }
+
+            // Un fichier explicitement identifié comme un autre produit HORUS
+            // ne doit jamais être interprété comme une surveillance.
+            if (data.horusFormat && data.horusFormat !== HORUS_SURVEILLANCE_FORMAT) {
+                return {
+                    compatible:false,
+                    reason:`Ce fichier est de type « ${data.horusFormat} » et non une surveillance HORUS.`
+                };
+            }
+
+            const formatVersion = Number(data.horusFormatVersion || 0);
+            if (formatVersion > HORUS_SURVEILLANCE_FORMAT_VERSION) {
+                return {
+                    compatible:false,
+                    future:true,
+                    reason:`Ce fichier utilise HORUS Surveillance v${formatVersion}. Cette application prend en charge jusqu'à la v${HORUS_SURVEILLANCE_FORMAT_VERSION}.`
+                };
+            }
+
+            const schemaVersion = Number(data.schemaVersion || 0);
+            if (schemaVersion > HORUS_SURVEILLANCE_SCHEMA_VERSION) {
+                return {
+                    compatible:false,
+                    future:true,
+                    reason:`Le schéma ${schemaVersion} est plus récent que le schéma ${HORUS_SURVEILLANCE_SCHEMA_VERSION} pris en charge.`
+                };
+            }
+
+            if (!Array.isArray(data.logs)) {
+                return {compatible:false, reason:'Aucun journal de surveillance (logs) n’a été trouvé dans ce fichier.'};
+            }
+
+            // Contrôle structurel minimal, sans rejeter les anciens champs facultatifs.
+            const invalidLog = data.logs.find(log => !log || typeof log !== 'object');
+            if (invalidLog) {
+                return {compatible:false, reason:'Le journal contient au moins un événement invalide.'};
+            }
+
+            return {
+                compatible:true,
+                legacy:!data.horusFormat || formatVersion === 0,
+                message:(!data.horusFormat || formatVersion === 0)
+                    ? 'Ancien fichier HORUS compatible — migration automatique vers Surveillance v1.'
+                    : `HORUS Surveillance v${formatVersion} compatible`
+            };
+        }
+
         function isoToFrenchDate(isoDate) {
             const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate || '');
             return match ? `${match[3]}/${match[2]}/${match[1]}` : new Date().toLocaleDateString('fr-FR');
@@ -1603,8 +1671,10 @@
             const operatorLabel = operatorInput.value.trim();
             saveOperatorPreference();
             return {
-                schemaVersion: 4,
-                horusFormat: 'HORUS_SURVEILLANCE',
+                horusFormat: HORUS_SURVEILLANCE_FORMAT,
+                horusFormatVersion: HORUS_SURVEILLANCE_FORMAT_VERSION,
+                schemaVersion: HORUS_SURVEILLANCE_SCHEMA_VERSION,
+                dataModel: 'HORUS_SURVEILLANCE_V1',
                 sessionId: sessionId,
                 application: 'HORUS - Surveillance Tactique Mobile',
                 packageType: forArchive ? 'HORUS_SURVEILLANCE_ARCHIVE' : 'HORUS_SURVEILLANCE_JSON',
@@ -1838,6 +1908,11 @@
         }
 
         async function applyImportedData(data, fileDate = null, archiveEntries = null) {
+            const compatibility = inspectHorusSurveillanceFile(data);
+            if (!compatibility.compatible) {
+                throw new Error(compatibility.reason || 'Format HORUS incompatible.');
+            }
+
             const logs = data.logs || data;
             const importedDate = Array.isArray(data) ? null : extractSessionDate(data);
 
@@ -1902,7 +1977,13 @@
                 }).catch(err=>alert('Import archive impossible : '+err.message));
             } else {
                 const reader=new FileReader();
-                reader.onload=async e=>{try{await applyImportedData(JSON.parse(e.target.result),file.lastModified,null)}catch(err){alert('Format invalide')}};
+                reader.onload=async e=>{
+                    try {
+                        await applyImportedData(JSON.parse(e.target.result),file.lastModified,null);
+                    } catch(err) {
+                        alert('Import HORUS impossible : ' + (err?.message || 'format invalide'));
+                    }
+                };
                 reader.readAsText(file);
             }
             event.target.value='';
