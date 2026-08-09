@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HORUS - Surveillance Tactique Mobile GPS</title>
+    <title>HORUS Mobile V1.0 — Surveillance Tactique</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -41,6 +41,23 @@
         }
 
         h1 { font-size: 0.85rem; margin: 0; color: var(--primary); text-transform: uppercase; }
+
+        .horus-brand-block{min-width:0;display:flex;flex-direction:column;gap:2px}
+        .horus-version-line{display:flex;align-items:center;gap:5px;font-size:.57rem;color:#8f9aa6;white-space:nowrap}
+        .horus-version-line strong{color:#c7d0da;font-weight:700}
+        .horus-version-info{width:18px;height:18px;padding:0;border:1px solid #3d4854;border-radius:50%;background:#20262d;color:#aeb8c3;font-size:.62rem;line-height:16px;text-align:center;cursor:pointer}
+        .horus-version-info:active{transform:translateY(1px)}
+        .horus-diagnostic-overlay{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.76)}
+        .horus-diagnostic-overlay.open{display:flex}
+        .horus-diagnostic-dialog{width:min(520px,100%);max-height:88vh;overflow:auto;background:#161b22;border:1px solid #30363d;border-radius:16px;box-shadow:0 28px 80px rgba(0,0,0,.58)}
+        .horus-diagnostic-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid #30363d}
+        .horus-diagnostic-head h3{margin:0;color:#fff;font-size:.92rem}.horus-diagnostic-head p{margin:5px 0 0;color:#929daa;font-size:.68rem}
+        .horus-diagnostic-close{border:0;background:transparent;color:#aeb7c2;font-size:1.2rem;cursor:pointer}
+        .horus-diagnostic-body{padding:14px 17px;display:grid;gap:8px}
+        .horus-diagnostic-row{display:grid;grid-template-columns:minmax(125px,.8fr) 1.2fr;gap:10px;padding:8px 10px;border:1px solid #2b343e;border-radius:9px;background:#11171d;font-size:.67rem}
+        .horus-diagnostic-row span:first-child{color:#8e99a5}.horus-diagnostic-row span:last-child{color:#e5e9ee;font-weight:650;overflow-wrap:anywhere}
+        .horus-diagnostic-foot{padding:11px 17px 15px;color:#7f8b97;font-size:.62rem;line-height:1.4}
+        @media(max-width:440px){.horus-version-line{font-size:.53rem}.horus-diagnostic-row{grid-template-columns:1fr}.horus-version-info{width:17px;height:17px}}
 
         .input-zone {
             background: var(--card-bg);
@@ -751,7 +768,13 @@
     </section>
 
     <header>
-        <h1>SURVEILLANCE TACTIQUE</h1>
+        <div class="horus-brand-block">
+            <h1>SURVEILLANCE TACTIQUE</h1>
+            <div class="horus-version-line">
+                <strong>HORUS Mobile V1.0</strong><span>— Créé par @HBB</span>
+                <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS">i</button>
+            </div>
+        </div>
         <div id="clock" style="font-family: monospace; font-size: 0.75rem; color: #888;">00:00:00</div>
     </header>
 
@@ -911,6 +934,10 @@
         }
 
         let sessionId = createHorusId('SES');
+
+        const HORUS_APP_NAME = 'HORUS Mobile';
+        const HORUS_APP_VERSION = '1.0';
+        const HORUS_APP_AUTHOR = '@HBB';
 
         // ============================================================
         // HORUS SURVEILLANCE v1 — CONTRAT DE FORMAT FIGÉ
@@ -1793,7 +1820,9 @@
                     sessionIdPrefix: 'SES'
                 },
                 sessionId: sessionId,
-                application: 'HORUS - Surveillance Tactique Mobile',
+                application: HORUS_APP_NAME,
+                applicationVersion: HORUS_APP_VERSION,
+                createdBy: HORUS_APP_AUTHOR,
                 packageType: forArchive ? 'HORUS_SURVEILLANCE_ARCHIVE' : 'HORUS_SURVEILLANCE_JSON',
                 pvLabel: pvInput.value.trim(),
                 pvKey: normalizePvReference(pvInput.value.trim()),
@@ -2081,6 +2110,58 @@
             updateArchiveStatus();
         }
 
+        function getHorusBrowserLabel() {
+            const ua = navigator.userAgent || '';
+            if (/CriOS/i.test(ua)) return 'Google Chrome iOS';
+            if (/FxiOS/i.test(ua)) return 'Firefox iOS';
+            if (/EdgiOS/i.test(ua)) return 'Microsoft Edge iOS';
+            if (/OPiOS/i.test(ua)) return 'Opera iOS';
+            if (/iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua)) return 'Safari iOS';
+            if (/Brave/i.test(navigator.brave ? 'Brave' : '')) return 'Brave';
+            if (/Edg\//i.test(ua)) return 'Microsoft Edge';
+            if (/Chrome\//i.test(ua)) return 'Google Chrome / Chromium';
+            if (/Firefox\//i.test(ua)) return 'Firefox';
+            if (/Safari\//i.test(ua)) return 'Safari';
+            return 'Navigateur non identifié';
+        }
+
+        function openHorusDiagnostic() {
+            const modal = document.getElementById('horusDiagnosticModal');
+            const body = document.getElementById('horusDiagnosticBody');
+            if (!modal || !body) return;
+
+            const speechAvailable = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+            const shareAvailable = Boolean(navigator.share);
+            const fileShareAvailable = Boolean(navigator.canShare);
+            const online = navigator.onLine !== false;
+            const mediaCount = getAllMediaItems().length;
+            const eventCount = document.querySelectorAll('#logTable tbody tr').length;
+
+            const rows = [
+                ['Application', `${HORUS_APP_NAME} V${HORUS_APP_VERSION}`],
+                ['Signature', `Créé par ${HORUS_APP_AUTHOR}`],
+                ['Format de données', `HORUS Surveillance v${HORUS_SURVEILLANCE_FORMAT_VERSION}`],
+                ['Schéma', `Schema ${HORUS_SURVEILLANCE_SCHEMA_VERSION} · ${'HORUS_SURVEILLANCE_V1'}`],
+                ['Session active', sessionId || '—'],
+                ['Événements chargés', String(eventCount)],
+                ['Médias chargés', String(mediaCount)],
+                ['Navigateur', getHorusBrowserLabel()],
+                ['Reconnaissance vocale', speechAvailable ? 'Disponible' : 'Non disponible'],
+                ['Partage système', shareAvailable ? (fileShareAvailable ? 'Disponible avec fichiers' : 'Disponible') : 'Non disponible'],
+                ['Connexion réseau', online ? 'En ligne' : 'Hors ligne']
+            ];
+
+            body.innerHTML = rows.map(([label,value]) =>
+                `<div class="horus-diagnostic-row"><span>${label}</span><span>${String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</span></div>`
+            ).join('');
+
+            modal.classList.add('open');
+        }
+
+        function closeHorusDiagnostic() {
+            document.getElementById('horusDiagnosticModal')?.classList.remove('open');
+        }
+
         function importJSON(event) {
             const file=event.target.files && event.target.files[0]; if(!file) return;
             const lower=String(file.name||'').toLowerCase();
@@ -2141,6 +2222,12 @@
             descInput.focus();
         }
 
+        document.getElementById('horusVersionInfoBtn')?.addEventListener('click', openHorusDiagnostic);
+        document.getElementById('horusDiagnosticClose')?.addEventListener('click', closeHorusDiagnostic);
+        document.getElementById('horusDiagnosticModal')?.addEventListener('click', e => {
+            if (e.target && e.target.id === 'horusDiagnosticModal') closeHorusDiagnostic();
+        });
+
         descInput.addEventListener('input', previewDictatedType);
 
         typeBtns.forEach(btn => {
@@ -2192,6 +2279,17 @@
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
     </script>
+
+<div id="horusDiagnosticModal" class="horus-diagnostic-overlay" role="dialog" aria-modal="true" aria-labelledby="horusDiagnosticTitle">
+  <div class="horus-diagnostic-dialog">
+    <div class="horus-diagnostic-head">
+      <div><h3 id="horusDiagnosticTitle">HORUS Mobile V1.0</h3><p>Diagnostic technique et compatibilité</p></div>
+      <button id="horusDiagnosticClose" class="horus-diagnostic-close" type="button" aria-label="Fermer">×</button>
+    </div>
+    <div id="horusDiagnosticBody" class="horus-diagnostic-body"></div>
+    <div class="horus-diagnostic-foot">Créé par @HBB · Ces informations sont uniquement techniques et ne contiennent aucune donnée de surveillance.</div>
+  </div>
+</div>
 
 <div id="horusMetaExportModal" class="horus-meta-overlay" role="dialog" aria-modal="true" aria-labelledby="horusMetaTitle">
   <div class="horus-meta-dialog">
