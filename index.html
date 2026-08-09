@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HORUS Mobile V1.0 — Surveillance Tactique</title>
+    <title>HORUS Mobile V1.0.1 — Surveillance Tactique</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -771,8 +771,8 @@
         <div class="horus-brand-block">
             <h1>SURVEILLANCE TACTIQUE</h1>
             <div class="horus-version-line">
-                <strong>HORUS Mobile V1.0</strong><span>— Créé par @HBB</span>
-                <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS">i</button>
+                <strong>HORUS Mobile V1.0.1</strong><span>— Créé par @HBB</span>
+                <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS" onclick="openHorusDiagnostic()">i</button>
             </div>
         </div>
         <div id="clock" style="font-family: monospace; font-size: 0.75rem; color: #888;">00:00:00</div>
@@ -936,7 +936,7 @@
         let sessionId = createHorusId('SES');
 
         const HORUS_APP_NAME = 'HORUS Mobile';
-        const HORUS_APP_VERSION = '1.0';
+        const HORUS_APP_VERSION = '1.0.1';
         const HORUS_APP_AUTHOR = '@HBB';
 
         // ============================================================
@@ -2112,13 +2112,44 @@
 
         function getHorusBrowserLabel() {
             const ua = navigator.userAgent || '';
-            if (/CriOS/i.test(ua)) return 'Google Chrome iOS';
-            if (/FxiOS/i.test(ua)) return 'Firefox iOS';
-            if (/EdgiOS/i.test(ua)) return 'Microsoft Edge iOS';
-            if (/OPiOS/i.test(ua)) return 'Opera iOS';
-            if (/iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua)) return 'Safari iOS';
-            if (/Brave/i.test(navigator.brave ? 'Brave' : '')) return 'Brave';
+            const vendor = navigator.vendor || '';
+            const platform = navigator.platform || '';
+            const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+                (platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1);
+
+            // Sur iOS, tous les navigateurs utilisent WebKit. Certains exposent
+            // un marqueur fiable dans l'User-Agent, d'autres (notamment Brave
+            // selon les versions et le mode d'ouverture du fichier local) peuvent
+            // être indistinguables de Safari. Dans ce cas HORUS n'invente pas.
+            if (isIOS) {
+                if (/CriOS/i.test(ua)) return 'Google Chrome iOS (WebKit)';
+                if (/FxiOS/i.test(ua)) return 'Firefox iOS (WebKit)';
+                if (/EdgiOS/i.test(ua)) return 'Microsoft Edge iOS (WebKit)';
+                if (/OPiOS/i.test(ua)) return 'Opera iOS (WebKit)';
+                if (/DuckDuckGo/i.test(ua)) return 'DuckDuckGo iOS (WebKit)';
+                if (/Brave/i.test(ua)) return 'Brave iOS (WebKit)';
+
+                // navigator.brave est surtout fiable sur desktop/Android mais
+                // peut être absent sur iOS. On le teste néanmoins si disponible.
+                try {
+                    if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+                        return 'Brave iOS (WebKit)';
+                    }
+                } catch (_) {}
+
+                // Safari réel n'est annoncé que si l'UA correspond au profil Safari.
+                if (/Safari/i.test(ua) && /Apple/i.test(vendor) && !/(CriOS|FxiOS|EdgiOS|OPiOS)/i.test(ua)) {
+                    return 'Safari / navigateur iOS basé sur WebKit';
+                }
+
+                return 'Navigateur iOS basé sur WebKit';
+            }
+
             if (/Edg\//i.test(ua)) return 'Microsoft Edge';
+            if (/Brave/i.test(ua)) return 'Brave';
+            try {
+                if (navigator.brave && typeof navigator.brave.isBrave === 'function') return 'Brave';
+            } catch (_) {}
             if (/Chrome\//i.test(ua)) return 'Google Chrome / Chromium';
             if (/Firefox\//i.test(ua)) return 'Firefox';
             if (/Safari\//i.test(ua)) return 'Safari';
@@ -2156,10 +2187,14 @@
             ).join('');
 
             modal.classList.add('open');
+            modal.setAttribute('aria-hidden','false');
         }
 
         function closeHorusDiagnostic() {
-            document.getElementById('horusDiagnosticModal')?.classList.remove('open');
+            const modal = document.getElementById('horusDiagnosticModal');
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden','true');
         }
 
         function importJSON(event) {
@@ -2222,10 +2257,26 @@
             descInput.focus();
         }
 
-        document.getElementById('horusVersionInfoBtn')?.addEventListener('click', openHorusDiagnostic);
-        document.getElementById('horusDiagnosticClose')?.addEventListener('click', closeHorusDiagnostic);
-        document.getElementById('horusDiagnosticModal')?.addEventListener('click', e => {
-            if (e.target && e.target.id === 'horusDiagnosticModal') closeHorusDiagnostic();
+        function bindHorusDiagnosticUi() {
+            const modal = document.getElementById('horusDiagnosticModal');
+            if (modal && !modal.dataset.horusBound) {
+                modal.dataset.horusBound = '1';
+                modal.addEventListener('click', e => {
+                    if (e.target === modal) closeHorusDiagnostic();
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindHorusDiagnosticUi, {once:true});
+        } else {
+            bindHorusDiagnosticUi();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && document.getElementById('horusDiagnosticModal')?.classList.contains('open')) {
+                closeHorusDiagnostic();
+            }
         });
 
         descInput.addEventListener('input', previewDictatedType);
@@ -2283,11 +2334,14 @@
 <div id="horusDiagnosticModal" class="horus-diagnostic-overlay" role="dialog" aria-modal="true" aria-labelledby="horusDiagnosticTitle">
   <div class="horus-diagnostic-dialog">
     <div class="horus-diagnostic-head">
-      <div><h3 id="horusDiagnosticTitle">HORUS Mobile V1.0</h3><p>Diagnostic technique et compatibilité</p></div>
-      <button id="horusDiagnosticClose" class="horus-diagnostic-close" type="button" aria-label="Fermer">×</button>
+      <div><h3 id="horusDiagnosticTitle">HORUS Mobile V1.0.1</h3><p>Diagnostic technique et compatibilité</p></div>
+      <button id="horusDiagnosticClose" class="horus-diagnostic-close" type="button" aria-label="Fermer" onclick="closeHorusDiagnostic()">×</button>
     </div>
     <div id="horusDiagnosticBody" class="horus-diagnostic-body"></div>
     <div class="horus-diagnostic-foot">Créé par @HBB · Ces informations sont uniquement techniques et ne contiennent aucune donnée de surveillance.</div>
+    <div style="padding:0 17px 16px;display:flex;justify-content:flex-end">
+      <button type="button" onclick="closeHorusDiagnostic()" style="min-height:38px;padding:0 16px;border:1px solid #3a4652;border-radius:9px;background:#202830;color:#eef2f6;font-weight:700;cursor:pointer">Fermer</button>
+    </div>
   </div>
 </div>
 
