@@ -923,6 +923,104 @@
         const HORUS_SURVEILLANCE_FORMAT_VERSION = 1;
         const HORUS_SURVEILLANCE_SCHEMA_VERSION = 4;
 
+        const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
+
+        function isValidHorusId(value, prefix) {
+            return typeof value === 'string' && value.startsWith(prefix + '-') && value.length > prefix.length + 2;
+        }
+
+        function validateHorusGps(gps) {
+            if (gps === null || gps === undefined) return {ok:true};
+            if (typeof gps !== 'object' || Array.isArray(gps)) return {ok:false, reason:'Une géolocalisation doit être un objet.'};
+
+            const lat = Number(gps.latitude ?? gps.lat);
+            const lon = Number(gps.longitude ?? gps.lon ?? gps.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                return {ok:false, reason:'Une géolocalisation contient des coordonnées non numériques.'};
+            }
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                return {ok:false, reason:'Une géolocalisation contient des coordonnées hors limites.'};
+            }
+            return {ok:true};
+        }
+
+        function validateHorusMediaList(media, eventIndex) {
+            if (media === null || media === undefined) return {ok:true};
+            if (!Array.isArray(media)) return {ok:false, reason:`Événement ${eventIndex + 1} : le champ media doit être une liste.`};
+
+            const ids = new Set();
+            for (let i = 0; i < media.length; i++) {
+                const item = media[i];
+                if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                    return {ok:false, reason:`Événement ${eventIndex + 1} : média ${i + 1} invalide.`};
+                }
+                if (!isValidHorusId(item.id, 'MED')) {
+                    return {ok:false, reason:`Événement ${eventIndex + 1} : média ${i + 1} sans identifiant MED valide.`};
+                }
+                if (ids.has(item.id)) {
+                    return {ok:false, reason:`Événement ${eventIndex + 1} : identifiant média dupliqué (${item.id}).`};
+                }
+                ids.add(item.id);
+                if (item.kind && !['photo','video'].includes(String(item.kind).toLowerCase())) {
+                    return {ok:false, reason:`Événement ${eventIndex + 1} : type de média « ${item.kind} » non reconnu.`};
+                }
+            }
+            return {ok:true};
+        }
+
+        function validateHorusV1Contract(data) {
+            if (!isValidHorusId(data.sessionId, 'SES')) {
+                return {ok:false, reason:'HORUS Surveillance v1 : sessionId absent ou invalide.'};
+            }
+            if (typeof data.dateRaw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.dateRaw)) {
+                return {ok:false, reason:'HORUS Surveillance v1 : dateRaw doit être au format AAAA-MM-JJ.'};
+            }
+            if (!Array.isArray(data.logs)) {
+                return {ok:false, reason:'HORUS Surveillance v1 : le champ logs est obligatoire.'};
+            }
+
+            const eventIds = new Set();
+            const globalMediaIds = new Set();
+
+            for (let i = 0; i < data.logs.length; i++) {
+                const log = data.logs[i];
+                if (!log || typeof log !== 'object' || Array.isArray(log)) {
+                    return {ok:false, reason:`Événement ${i + 1} invalide.`};
+                }
+                if (!isValidHorusId(log.eventId, 'EVT')) {
+                    return {ok:false, reason:`Événement ${i + 1} : eventId absent ou invalide.`};
+                }
+                if (eventIds.has(log.eventId)) {
+                    return {ok:false, reason:`eventId dupliqué : ${log.eventId}.`};
+                }
+                eventIds.add(log.eventId);
+
+                if (typeof log.heure !== 'string' || !/^\d{2}:\d{2}(?::\d{2})?$/.test(log.heure)) {
+                    return {ok:false, reason:`Événement ${i + 1} : heure invalide.`};
+                }
+                if (!HORUS_EVENT_TYPES.has(log.type)) {
+                    return {ok:false, reason:`Événement ${i + 1} : type « ${log.type} » non reconnu.`};
+                }
+                if (typeof log.desc !== 'string') {
+                    return {ok:false, reason:`Événement ${i + 1} : description invalide.`};
+                }
+
+                const gpsCheck = validateHorusGps(log.geolocation);
+                if (!gpsCheck.ok) return {ok:false, reason:`Événement ${i + 1} : ${gpsCheck.reason}`};
+
+                const mediaCheck = validateHorusMediaList(log.media, i);
+                if (!mediaCheck.ok) return mediaCheck;
+
+                for (const media of (log.media || [])) {
+                    if (globalMediaIds.has(media.id)) {
+                        return {ok:false, reason:`Identifiant média utilisé dans plusieurs événements : ${media.id}.`};
+                    }
+                    globalMediaIds.add(media.id);
+                }
+            }
+            return {ok:true};
+        }
+
         function inspectHorusSurveillanceFile(data) {
             // Compatibilité historique : les toutes premières sauvegardes
             // pouvaient être un simple tableau de logs.
@@ -969,6 +1067,16 @@
             const invalidLog = data.logs.find(log => !log || typeof log !== 'object');
             if (invalidLog) {
                 return {compatible:false, reason:'Le journal contient au moins un événement invalide.'};
+            }
+
+            // Un fichier explicitement HORUS Surveillance v1 respecte désormais
+            // le contrat de données complet. Les fichiers historiques restent
+            // volontairement permissifs et sont migrés à la réexportation.
+            if (data.horusFormat === HORUS_SURVEILLANCE_FORMAT && formatVersion === 1) {
+                const contract = validateHorusV1Contract(data);
+                if (!contract.ok) {
+                    return {compatible:false, reason:contract.reason || 'Contrat HORUS Surveillance v1 invalide.'};
+                }
             }
 
             return {
@@ -1649,6 +1757,7 @@
             const rows = Array.from(document.querySelectorAll('tbody tr')).reverse().map(tr => {
                 const cleanDesc = cleanPhoneticForExport(tr.dataset.rawDesc);
                 const mediaList = (Array.isArray(tr._media) ? tr._media : []).map(item => {
+                    if (!item.id || !String(item.id).startsWith('MED-')) item.id = createHorusId('MED');
                     const clean = serializableMedia([item])[0];
                     if (forArchive && item._file) clean.archivePath = `MEDIAS/${item.id}${extensionForMedia(item)}`;
                     else if (item.archivePath) clean.archivePath = item.archivePath;
@@ -1675,6 +1784,14 @@
                 horusFormatVersion: HORUS_SURVEILLANCE_FORMAT_VERSION,
                 schemaVersion: HORUS_SURVEILLANCE_SCHEMA_VERSION,
                 dataModel: 'HORUS_SURVEILLANCE_V1',
+                contract: {
+                    session: ['sessionId','dateRaw','logs'],
+                    event: ['eventId','heure','type','desc'],
+                    optionalEvent: ['contact','geolocation','media'],
+                    mediaIdPrefix: 'MED',
+                    eventIdPrefix: 'EVT',
+                    sessionIdPrefix: 'SES'
+                },
                 sessionId: sessionId,
                 application: 'HORUS - Surveillance Tactique Mobile',
                 packageType: forArchive ? 'HORUS_SURVEILLANCE_ARCHIVE' : 'HORUS_SURVEILLANCE_JSON',
