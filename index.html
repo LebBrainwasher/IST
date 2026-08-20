@@ -9,7 +9,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HORUS Mobile V1.0.1 — Surveillance Tactique</title>
+    <title>HORUS Mobile V1.0.2 — Surveillance Tactique</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -64,6 +64,14 @@
         .horus-diagnostic-row span:first-child{color:#8e99a5}.horus-diagnostic-row span:last-child{color:#e5e9ee;font-weight:650;overflow-wrap:anywhere}
         .horus-diagnostic-foot{padding:11px 17px 15px;color:#7f8b97;font-size:.62rem;line-height:1.4}
         @media(max-width:440px){.horus-version-line{font-size:.53rem}.horus-diagnostic-row{grid-template-columns:1fr}.horus-version-info{width:17px;height:17px}}
+
+
+        /* Logo HORUS — interface et modale uniquement (hors export PDF) */
+        .horus-screen-brand{display:flex;align-items:center;gap:8px;min-width:0}
+        .horus-screen-logo{width:42px;height:42px;object-fit:contain;flex:0 0 auto}
+        .horus-diagnostic-title-wrap{display:flex;align-items:center;gap:10px;min-width:0}
+        .horus-diagnostic-logo{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
+        @media(max-width:440px){.horus-screen-logo{width:38px;height:38px}.horus-diagnostic-logo{width:42px;height:42px}}
 
         .input-zone {
             background: var(--card-bg);
@@ -265,6 +273,170 @@
             background:#111;
         }
         .media-details { text-align:left; color:#d1d5db; font-size:.76rem; line-height:1.5; }
+        .media-preview-stage {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+        }
+        .media-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 4;
+            width: 40px;
+            height: 52px;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 10px;
+            background: rgba(0,0,0,.62);
+            color: #fff;
+            font-size: 1.65rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        .media-nav-btn.prev { left: 7px; }
+        .media-nav-btn.next { right: 7px; }
+        .media-nav-btn:active { transform: translateY(-50%) scale(.94); }
+        .media-nav-counter {
+            display: none;
+            text-align: center;
+            margin: 4px 0 0;
+            color: #cbd5e1;
+            font-size: .72rem;
+            font-weight: 800;
+        }
+        .media-nav-visible { display:flex !important; }
+        .media-counter-visible { display:block !important; }
+
+        /* HORUS Mobile — Rapport PDF optionnel avec médias, aligné sur HORUS Bureau */
+        .print-media-thumb-wrap, #printMediaAnnex { display:none; }
+        #printMediaAnnex { color:#000; background:#fff; }
+        .pdf-choice-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(0,0,0,.78);
+        }
+        .pdf-choice-dialog {
+            width: min(460px, 94vw);
+            border: 1px solid #475569;
+            border-radius: 12px;
+            background: #171717;
+            color: #fff;
+            box-shadow: 0 20px 60px rgba(0,0,0,.45);
+            overflow: hidden;
+        }
+        .pdf-choice-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid #374151;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+        }
+        .pdf-choice-head h3 { margin:0; font-size:1rem; }
+        .pdf-choice-body { padding:15px; }
+        .pdf-choice-info { margin:0 0 12px; color:#cbd5e1; font-size:.76rem; line-height:1.45; }
+        .pdf-choice-btn {
+            display:block;
+            width:100%;
+            margin-top:9px;
+            padding:13px 12px;
+            border:1px solid #475569;
+            border-radius:9px;
+            background:#222;
+            color:#fff;
+            text-align:left;
+            cursor:pointer;
+        }
+        .pdf-choice-btn strong { display:block; font-size:.86rem; }
+        .pdf-choice-btn span { display:block; margin-top:4px; color:#9ca3af; font-size:.70rem; line-height:1.35; }
+        .pdf-choice-btn.with-media { border-color:#7c3aed; background:#211a2f; }
+        .pdf-choice-btn:disabled { opacity:.42; cursor:not-allowed; }
+
+        @media print {
+            body.print-with-media .print-media-thumb-wrap {
+                display:flex !important;
+                align-items:center !important;
+                gap:5px !important;
+                margin-top:6px !important;
+                flex-wrap:wrap !important;
+            }
+            body.print-with-media .print-media-thumb {
+                display:block !important;
+                width:25mm !important;
+                height:17mm !important;
+                object-fit:cover !important;
+                border:1px solid #64748b !important;
+                border-radius:2px !important;
+                background:#f8fafc !important;
+            }
+            body.print-with-media .print-media-thumb-label {
+                font-size:7.5pt !important;
+                color:#475569 !important;
+                font-weight:700 !important;
+            }
+            body.print-with-media #printMediaAnnex {
+                display:block !important;
+                page-break-before:always !important;
+                break-before:page !important;
+                margin:0 !important;
+                padding:0 !important;
+            }
+            #printMediaAnnex .annex-head {
+                display:flex !important;
+                justify-content:space-between !important;
+                align-items:flex-end !important;
+                border-bottom:2px solid #000 !important;
+                padding-bottom:8px !important;
+                margin-bottom:10mm !important;
+            }
+            #printMediaAnnex .annex-title { font-size:15pt !important; font-weight:800 !important; }
+            #printMediaAnnex .annex-subtitle { font-size:9pt !important; font-weight:700 !important; }
+            #printMediaAnnex .annex-item {
+                break-inside:avoid !important;
+                page-break-inside:avoid !important;
+                margin:0 0 9mm 0 !important;
+                padding:0 0 7mm 0 !important;
+                border-bottom:1px solid #cbd5e1 !important;
+            }
+            #printMediaAnnex .annex-event {
+                display:flex !important;
+                gap:8px !important;
+                align-items:baseline !important;
+                margin-bottom:5px !important;
+                font-size:9pt !important;
+            }
+            #printMediaAnnex .annex-event strong { font-weight:800 !important; }
+            #printMediaAnnex .annex-desc { margin-bottom:6px !important; font-size:9pt !important; }
+            #printMediaAnnex img.annex-image {
+                display:block !important;
+                max-width:160mm !important;
+                width:auto !important;
+                max-height:95mm !important;
+                height:auto !important;
+                object-fit:contain !important;
+                border:1px solid #64748b !important;
+                background:#f8fafc !important;
+                margin:0 auto !important;
+            }
+            #printMediaAnnex .annex-meta {
+                margin-top:5px !important;
+                font-size:7.5pt !important;
+                color:#475569 !important;
+                text-align:center !important;
+            }
+        }
+
         .archive-status { font-size:.68rem; color:#9ca3af; margin-top:5px; text-align:left; }
         .archive-status strong { color:#fbbf24; }
 
@@ -591,6 +763,17 @@
 .horus-meta-note{font-size:.7rem;line-height:1.45;color:#9aa4af;border:1px solid #30363d;background:#111820;border-radius:10px;padding:10px 11px}.horus-meta-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:14px 18px;border-top:1px solid #30363d}.horus-meta-btn{border:1px solid #3a4552;border-radius:9px;padding:9px 12px;font:inherit;font-size:.73rem;font-weight:800;cursor:pointer;background:#222b35;color:#e6edf3}.horus-meta-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}.horus-meta-btn.warning{background:#7c5a10;border-color:#9a7014;color:#fff}
 @media(max-width:560px){.horus-meta-actions{display:grid;grid-template-columns:1fr}.horus-meta-btn{width:100%;min-height:42px}}
 </style>
+
+<script>
+/* HORUS Mobile — logo d'interface embarqué une seule fois et réutilisé
+   dans l'en-tête et le modal de version. Aucun impact sur le rapport PDF. */
+const HORUS_UI_LOGO_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABQCAYAAAC6aDOxAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB+oIFBMaJuhAe0IAACAASURBVHja7Xx3mBRV1v57blV1nunJGYYhw5CzgARBVFRERRRRMaxhTWtOq+uu7q6uYQ1rWNfMmsAASDABguQMkgcm5zw9naur7vn9UT0DCG509/ue3/PV89QzHaqm7337nvec855zG/i/428e9L9hEN1uXkyRUJOjtbo5gUMxRfEmxpJzMoLI6B6t+f0o+aM3FjHhCIBzif+/AajLOb/qmpadMr5gUv+R7fbkPrpIyDcMkRchu0uoKkCCBRhGxCQX6WEbyYoMt3E0wW8cWftl+84AiW09L/KWapqLU7vm88IBx8/mpwfqPw7QxCfepdKvdoyceu25F0dT8s4Nu1J7U0KaqA+CIiYQNQh62IARMmGYhBgpMAwBMwpAEiRbo+ydzBicDU4xI9wVsQqzXXzx3HfRT4cPi66357jNoqHJvDXppwfpPwZQ3uTbks64YPzV7n6FN7qyu/aqIxeFAyE0llejqawE/poKhCtL0br1ANjfAAgCIADhAJJzoPbrB5FWACWtG5SMfGg56ZBOFewEFBcwIxWYkMBICMqKw03ytWXlkb90LfS2Lhz+vxyg7DPuyJxx1fT7nd37XiMychJa2/1Us3cPitesRfHnK8CRMgaYiRAAuIgEVTCjCYwAmA0I4SYSCSxlAUC9GZROpBJSTifn1KnAyDFI7N8DsQQVbheQkwDc5AXS/NxeVGS+tGBf63MFEzNbPxr80wD1kwGUde4jCeOnjfhFypDhd4vMrIT20nIq+WYFtrzxV7BezkTUAml8KVRlpWJ3rkvJHVxWt3fJKSYxmoAUAK1ILkihUKQq1wj6RrApJzLTVAilLxJHU/YNc5ExaRxsBV44bUC6HZhuAxKqzKo13wYfLeofefebidn8vwKgQfe+eU7imAkvegu6dTcrylG++EMc+vhdwPSbYGOpUNQ3ErO6ftNass34dz9LTenV34wZ88CYx4689NFzfo6CK86G2ssLuwBUAKN0ibYdwS9/9371TS3vFVb+jwFkH/2AZ/CsaS+Geo64MqRJEfv6Y1S++RzIbIoA/Dop4lmbJ92dnOQ4Unt4u/lTmrKWWegww9ErmOkh2AvyL7jrTgy4cjIq3BpaDSCRgazacOu+BZXXfPVEv6X/dYAcUx4Z7j1rzrt6eu9+0dodCP/5UaB+JwP8nlDVX5vB2jIAsKX0+OOdN8w5j8GL5y9Ysik9LePw0OFji0XaKD3aMwsfXj3q3zIDd7dRznBL680sbA936zktcfoTd6J2YC4qo0AgBgyLRc3wqurf7PHw74uv7s3/FYCcc1+ZIfrNeCckkrzY/Vfw54+BZKxUqNoNZqh29fHXJuX0H5GaYNvw1usvqd0KCri5uYUj4aCMRvXmmK7XxWKxgB4zapubmxuKjpZWLlr6Vbkp+fDkyWcUvfnyE6F/dEwidUAeG8brUFKmTbnvMYQumoRqSYjEgNOEwWJTxdurtjbe7PvL2Nh/DqAJeyip7+4ro7nnvRHx6QqveQzY/wkI+FBotp+bgWr/D28ZeeGVtH/d+mf0aOz23z5ytzjrnOlQVBuklFBVBZIZBEBVVdg0BYoQCAb9CPrbpd/vP1xRUbnhgwWfr9NNrFr79ce1fxcob+87WNKT+bPv0xy3XI5GYYNpAuNtEllbSpcsLm+Z3fT4GOOnB2jWdvJm7rvOTJvxaqi5XfCK28DVm0wBPCCjTX/8sdsGDpxIriRnTlHR4S99wWi/XvnZ9MsH7sKgIcPgcHoQjuqIGQaIBIgIiiKgCAFFEFxOB9wuO1RBqK2pNkvLKrYuWrL805r6to++WPLXHwVLJPWdwJI/8Uy4MjXz/l+g0ekCMXCG3YRrY8nCVZWhubW/GyZ/UoAyr/rT5e25l78dafOpWH4T0LA7RERXynD94lNd32fIuAH9uufNvHDm+ed37dplaE52jvAmecnj8cQ/mAACmAEpJaK6AVNKAGACCEQQRGAwCAQhCDabBgLj6NFifcuWbZ++8tYnL+3ZvGLzqT5fSRtYKGPGCs/IWXnuh+9H2O0EMXCh04CysuKpN+7s9eBPBtDImXeNqh5y1+q6Vjj5s2uApu9DqqLMjAVqVh1/XY+B4/ILe+bNnXPpRbMHFBYOyMnrQqbJiBkGmBmqokBRrJVCcQAsnOLPBUEIwUIQBIk4TNbBAMAMBjrvrayswqrVa7/40xsLH/l+8/JdJ4GUOqiPNHmlNu7KnMQHboNpt0EVwHVqlPe9W3bFsuf6f/RvA9RnxLSsj954doc3NSNrysw7UHZwTUxTlemnjx+7tqqmOiPQ7h88sG/3sXMuvficvv36Ds3r2o1MUyISNSCEZTJCCKiKsB7HgegwKUEngANFESyEdZ21mOKr7Yej5WMzOHSoyJj//sK3Nn1/+L7vln3gPxGkwQNNQ67zzLonwXPjXAiF4FCAq0L+4EtPV41uWjTg4L8M0M/u+Y24YNKopRMnnH72Xfc+gDfnf8pnThiGK+bOCWs2TU1I9GoZGVmUnJIG3TQRicQgBEFTFWiaClUREEKJ/yUoQnQCIYhAHaB0AENEJI6BduLBx4bLJ488Eoni86Urjjz8xF/mFe/5essJIKUMmi6hLU6/8wUlYcZpsDEw0M4YsLdhx2t7GsdV/27wj3o25W8BdME5Z91w2exLfvH+Rwvw5HOvQRp6sKS8KtKze0FCt94DleycPAobDH8wAsM0O1eKiBOtiJNtJyjimHlFdB3NLW2orKlDcWkVjpRW0e79xSg6Wo2Sshr4A2EQAW6XMw4WnfC1Mp+wlFhVFSrs3y912MCel2/aVV7eXFe6t/OKcP0R4cp0B3ftHJs29kxypLjhZ0L/Ls6cxH1GYM/a5zf+0yto3OTzs9589dn94Ugk6eyLr0Z9VSUT+CEStIdJWZyTlapNOONsGjN6JNJTU5DgcSIpMQEOhx1OpwNOhw2aqkIRAh2Eq0ejKC4+ioOHi1BeUY3mlib4/X7U1jdCcziQlJmNsCMJQW8WAnYPpOpFP1cqZnb34LThXZGTlXy8bcVpyXou2TJHRRB27doj5157941Fe9e81Rl5d5lqM4KtG93Dzh9a+MwvAZWgCMKVzeHA4+/6+ta8kVv7TwG0YOGnb5937jlX/fz2B/DBgo9hGkYJMQ2U0YaI6sk+XUp+l6XsCjYw8rQxlJbVFQmJXqSmpiHB40ZB12zkZqWjS04mUpISoakqmAEhCKFQENU1taioqMTGLduxdes27Ni9HywlAAabBsASRAIYOQzeSRcix9sD12al4OKJ3ZCbk9yBkwUPxwFihh7T4bDbsXHjZuPKnz98QdWh777sNJes0UNNQ9nU99fPaclThkMDMMlFMJe3vLZrWtotK3qerACcEqABw8/o88Xiv+49Wlqh/OyWu1Fy5CgT+GoZaXyv8xvxZHoNQ94Klj8HKdkgMCQT2ADIsgFFEbjg3CmYNGkyhgweiPT0DKSmZ3QC1UHS5ZU1tHrDdj586CA+++RjNDa1AtIEWAKkAsIGgOC47mfokTcKd/VIwgVTCuF2OyBlB1IMZkYsZqC4vBpDB/TCU888X/vim0uG1B1Z19Q54bQxr8Lb/4bJC18CJ9ghCJjdouu/n9/Wr/zl7LJ/CKCly1a8O+WMyVfcfv9v8c4778I0YiWKQv2MQN1JEajmzUsyopEvIGwjIRQaOaAA18ybi8FDhiApJRWa3RkHwiJmRRVx0ztG1ooiEIlGseSbzQiHgzj6/Tb86Y0PwLEoMoZPQWP3a0BHPoHctxJEJpLvuBdjk7ritmF5GDWsFxRF6QSIiLBqwy4M6luAaMiP4ZMuej3SePCmziAy8/QclnRk4EO/dWTMGAcNwFQnuOrDyPPP3e2+56Sg84cvjJl4bsGAwsLLvj9wBDt37YZpGgzCC6cEJzFvoGFiE2zukVfMOovWfvEh3v/gPQwYMQ51fhOVje1o84cQjsagxwwY0oSUDCklZHxC0VgMNfVNaPMF0LdHF5gQ6NKjj2U7igPjrpmLMS9MwU3zpgNSgmMxtDzzNJa99xSuXboav3hpETZs2ok2nx9scRGC4TC++HYLnC4XYiauSuwyIrNjzLJ+XQ0E3tr7xkKIqAGVgLUGaPAY7eqRzze4T5JXfvjCNXMvvjYnN1t96c0FKDlaxABCqqK+90M/qCblzzBM/HXM4O7u3z72Kyro0Qu7D5WhZHcR7DYNLqcDmqrBMCR0YYBgWR6R7HThRARbnMg37ylCMBKFYTK8qZko7JmL/WWtqDUldjkYW2qrGZqXkMjApD8Cq19C9StP44Pu3bBl+1DkOR3oV9AVbpcD1XWNCLT7MH/+u5CGbg8FjSkAPujkIo1eNVqO3GTsLxKuEf2hAHB0V5Lbvkw4H8BHP2piv3n8CZp+9rSjbk9it6tvvpe3b9nMDCziUN3sE8BJzL/UBL3zyJ3X2K677jocKq1FWU0TFCGgaSrsNo2cTjs7bTbY7RrsNuvUNJVsqsKaqkJTBZR4ZK0qApFoDGs270FVfTNsmgYt2opbH3oGWX2HYMDiV7DVMGCs2YhYl96INaeBb74AaNgPEKDa7TD1GCAjAGkWfyl23HbrdUhN8uL51z97fuiEifeufv9ZK/8aMZqUWu+69DMvPG38b66HIMIAB5C+x1i8oI82a01XwaeMg8rr/KPuv+vWu79Zs55WfPEVfG0+kKAnOBbY12lWSflnS6aF7//5Se2Ciy7G6s370NDSbvFMPFrWVDVOwvE04rj4p2PlWDER4hEzoKkqeubnQJoGWttD6NK1Cwb3SMPiz5ZzRkUb9R3QCwd79gEHDfBHzwHbNgCahmlnT8Oll1+F/oOHYciI0WAjivr8Aeh534foP34W5k0fi5vmnD26trhoUnUweWVb3UE/aqqhJHZN9JfWTSu46FzSHCpaQBisIn/d+vbnqpf8wTilif3q/tvPdzid9PHiL1Ff3wAGTEHiq04dKLV7/2jM/GDph6+ovfoNxIrvdsE0LaFQmpKEEMySYUqrhHN8MGw9tr4YRREwpYQQFE9QBQAJIQRGDemHnIwU7Nx3FEPGTMbCN3vRy6++juXj3gNULyADgCCQ3YHbb74WAwcOQnOLD4mJiZCxIN589QBo3jIUb27Fm21+bK1PwKfTu9KvH7lnQkH+R+tenu84d9/GDw4qNvGJGQk/3X60lOzD+0M1ATVVOIsCruEA1p8SoB7du00rr6hEWXk5opEICLTPDNS0AEBSXqHDHwh9sODNZ729+w/Cmq37OpNHKSURCDHTBAlCot2J3IxU2G0KYlEdNk2BiHsaVTDscU9mmKa1sjpdtQlTErIy0jBtQhL27j+MkuomzLj4EgwY2B9r1m8F6y5cfdVs9C4cCl0SgqEwvEkJIGngyyVLgemPApoKueVu+Lam4dDNL6E5kILUdBuuu2ZuflQ3vnjdiIw8oNdVQ9cONu07Upg8rD9gAoYHOCdXGfvhqQCaftEV7pTU5MGHi44g4PfHXSZv7cx1ovojTz5828DTxk/Emq37QETgeKTGDHY5NWSlJCIYCKCypATvv78Qh44UI+Rvg9/XjJb6OjBbq0oycO8dN2LatKno3qM3HE4nWFJcAombPwkMKOyLIYMK4fMH4B83Ej+/8QbYHA60tPnh84egGAaSvR7U11Rj/jvzsVKOAuWfCWE6QJd8xIpbo+GmiY+XlOHOK7rA5dRw9VWXdtm6becr6ZWjZ3/XsHL9oW92F/a86gKEYsCBMDA5XY748FRerPho8YDMjEz1k08/RyQa6Xj5MAAkZvfrMXFU4S+uuPIKbNtXEjcTBcIw4bApcCgKKiqq8Npb69DaUImSfTvAUAFFBUiAFA1DBxXiZ9deiZEjhqN7jx4goSIYisKUEjFTgoB4kmr5jo58NBjTAaHAm5IKlhKRSAQkDcioH9Xl5Vj33Xp8WpuBWMbNUDwFkHYP2OkE+QnUEsNaaWIdPMBfK3Hftflwu1244WdXXDj7+sdGEet7uGwP2toMCJuGDQzcZKf+U1f7aeUZCXwCQH16dO2dmJiIL1auQzQSAYhAQlQzgKgee/SRhx9wVtW1gQhQVQWmlEh02XHo8FEsX7kOZYd2oLm+ARACpLoBRYVQFFxz6bk455xzUDhgILIz06CpCiJRHa3tQRhxYDo4qiOL7+CrxoZ67N27D+0+H2rr6rBxy07sOlSBaHszTE8v0MxLQF2uA/rlQ7SokFIDVIIAQLEYwTQBKSGliSd3C4zbVo9Jp2Vj+LDBlOI0rvCFxRLd1NFa3wJnRiagA36dC9y+BuogzE6AzpwyqVsgEKCqumboUR1kkWmtN6+w+7WXnXdZVk4XHC6thaqocNgZQV8rPl72LXZsXYu6ikpAUUGaAxAKQIQZF0zH1ClTkZudjdTkBGSkJUNTBQzDRFsgjFBEh5QyHmgQFAKEsOJWRQiQIHhTMjD5jCkoLytFbMtm7Np9AMGYE9TvesDjAh+ugKxcDPI1AxdeDE4eAJHUB+A8cAODJVv2LBlEAi8tbcfYEZlQNQ1zZk2b/MxbX7+i61Fu9/mIvBlgEMKmad/1TTgFQNMJAKWkJGcEAgGYpgnDMAAiJsAfCIauu+yy2crh0mqACTZNxdEjRXjljb/i4I4NgOIANLvlwklg8MA+mDPvWni9qQwwkRDo170L7DYVpsloD4YRCEYQ0fXOPEqIY+qioLieFBfx9ZiBhKQ0zLjwYpx7/vn4dtUqPPToc/APvwWcfj6QdwkYfsi2OqDyCIyGz0DeAGjEXFDiOHCdCoIEgbCsxYaSinYUdPEgv2te9275WfX79ldCjYYQjVo2HVKB5lY99SSAnE5XUiAQZMOIgVmCGWy32YzpU8df7k3JQOXRKng9LuzYtg1/fOFl1FVXAprLWjEAIFTcd+dNGH7a6aipb4FkkxI9bvQpyIXTroEZiOg62vxB+ENh6DEDUko4bCpcDgd8be1oampCS2MdKsrLsHPPAazbugdBvx8yErRyLRCSk73Iy0rBgbVPAb0HAv0uA2l5gLMHIPJBtpFgage2fg+pvw5x5kMQwf5gfxgQKsqqw8jLdoIIWq++BZF9+8vQHIzAG7UaQ0iTMJqaEk4iaZvN7giFIzCltDwYQELVRlww49wuR8trAJbYtmUTHvvdHxAKBEGaw5InjBhsLg/ef+M52BMzUFrdCEVR4LTbkZGSiOREN5gBU0q0B8IW9xgm3HYFjU1t2H3wMD74bAWqKkvQUF4CkLC+ShInpozCEs1a/VG0BhqtL+bIPuDwg2AWDLKDeg8DFwwGaRnE6QNA2hjI914Dz54B4Z4EBKJo8UnEDBN19Y2tRfuPmGDJbEqKRqyP8dlNCDOgnASQaZpsSgnTtGIagFma5nlduxXQ0Vo/Aq0NePSxJxENh0GaHTBigBFFbl4XLHz/L2gKmiipbrBKN0KQ3aZxUoIHqqKAwQhHdYSjOgK+NuzZewTvLfoStcW70VJXZ4FBBAjNGuWJCiLH7ffYdSzZCtMVQFAxgK+B2D4u3l6L4p1gcAaYh3Nq3lnoNzOfP/4IfHV3cDAXJEyYpsTa7zbv0UkVYEnMBD1qcWGNYgKs6ycBFA6H/JqqQkoTIAFmSdFodKpic0Exm/CrX/0GejhkrZxYhIXUpTc1XflswZtoDRMqapsgJcflVYLNpsJh1yCZYZoSh4tK8f6i7/Dtps0o3fUtpCktEIR6bOKkgpg76j5gS1cikHqckgjLU4I3s2k8Ck35Fv7yU9W43lC4l2Jueu0iAr0qD36YLLr8EgluHfsPHsaarUXL4EywTMnmtBq2wAhxEKoabD8VQO0up5OYGSQIbEg654wxiaYpsfDD+WhtbgY0J1gPQ3Cswub2Rj5f+HYf4fCitrICEtwpfxIRCyHAANpafXh3wVdYsmY7yvevQ7C58TgTEoBQQIoDYAmWJlh0xEGWp6WE7uBAOQBpxVSEIJjvpqSEN7h6LyPy45q6Wf21CeBjShlchcXL19CjD6mZaYQF733u87q09xr8wRyGAlPxQOjWl6LaQ+xIcdX5f6gHHS0urXS6nGBGPKlkDBo0gLZt2YSly78BbE7AjEGw3qS5El5/9Y+P9e7Ruy8aW/xW0PiDKoSmCFSWV+Dmh/+M9z75DAfWfmKBQ0r81ECuLJCWBDYiYJbxlWSd5EwH9ZwFjjQCxGyBQ0GwPJeDpa/L6r3/cCOCbNmziTRt282ZMVSX7sJLby36dW3plmbJyCci2J1JkFHACDOCwUBzXkLP0EmC2ZvvfHTE7fYwZMyqRJFAa5sPjz72e5DNBUgJGJGIzemaM/fi6XfOvPBCamoNQNOOZe7MDFNK2DUF1RVVePzPS7F769eo3L8tLp1qnQBR7mQgoQdYbzvOzKxVRUn9gJzJQLgOMMNxrlEY4Gs5WLbuX2m4SOrZt72Pp4SvvuHOJYl53f8UD08HAgmQNgsgEQOEEjy8qzH1ZEXRk+DaV9/QhJnnTLT4USh49Z2F8IetzJ9jYVYU9VEo9rF33HFbaqvfirZtca1HURQIIeCya9ADfsxfsh4HNixCS3W5BYBQrYk6skEFFwK2BHDDlhPBIQG4uwHJhYAnF1z53XHA0dccKPnkX22TyRVtjtvnXfWO8OTOad6zNM4F4jSMn0hGQIEZAbqlAof2lH6PJd35JA66ZPbssob6+ubBgwanLfx8FcAMKQkkFOaYDoLc1a1n3zeuuvS8wxlZuahrbreibUGkqSrbNBUxw0SSQ8Wf3luJvRuXwd/adpxJCabcwQR3IaBlgvc+ByhaHIC4dicJyBgNVgiEiBWEdrp78ca/00d0sDQyRQaK2RcotrDpMsnDweBE2+ih0Cut+gDLMA59vmvDKTXpJ359Pzc1Na7p06e3RbZxV8vMYFMnRSi/qamtuXDmzBmpxRX1iEZ1mKbscOtQVQX5GUmY/9lalHy/Hv6W1jgw1sqhHsMJGUPA0MDRJkCxHfNeEAxmIP00CzTVBTaoA1iABAO08d8ByGhcfyJnhcMzAHLD2wcyArAORFoqQE5t/Y+K9kuXLV+W1yWfjylczJAmSFBpt945X8y+4MxLklLSKRAMI6JbQjwRwa6pSPUmYPvOfagoP4S6itJjvEECyMoDUgaBQwKU1Aso/yKesynxIQjLi3sLLJ5S3aCEpGOqMCkAlLafsoWPWc6j/J6Qji4W/5hAOHh0j7n36aofBWj77n1fmEZMnz55VEd9l1gaIBKfmkaibeqUM06vqGlEWI8iGtUR1WPE0qp/ST2KVVv24sDmNRYwFudYrq3XFMBngGyJgBBAzNfh6rkDRLJnAw5vfGVpYJEQj406Ims1/ydDJ3XMaDDOoMsuJLNIADrDk6Jzw2dffPY3yz4H92xuKist/fL888/vVAut+gtvbGluGNijR3fnkYo6BEMRBMMRiuhRmFKyw27Hhi27UFOyHyxUtqTueDQ8ZAooqIE1D1h1Amx2EDN3XgMGcgZZ7yl2yyRtLiC7d3z1ACTE1J8EnMxJgsAvgDSijLHgNsu8os0HJLdH3/+7dbE/Pv/C6z179upsoSBLFyqT0uxjs7sQjeqIRGOI6jpHojGORmMwY1Gs3XYAZQf3W6uG4qtDSiCxNzgMkOK0uujVGCBUPsY/1iJj1WWtHsVmARgMgobMiqceggC+HaljHf82QGbsMWY5gq6+lGRjOmAAmpsRLVn/rSx5u/TvApSd1/Xr5pa2/dfMuaCjL4cVRQ2oQqRZwMQQieoUDEYRjliyRUN9PVoaKuO8Irjj31K3YYBuZ6gOi3wVO6DaOgpkx6UYAjACgOKxVoyiWWqkoydoxHgAAgzZHdJ8CYnD/vXW5bTR92BY4f0k7KDB54EPCsAAzFAJy01fvXjKdr4fvrB44Xxz+bIlj5999lmdq0hKw26yVEzJFIsZiEZ1DkejCId1CAKOFpeipvTwcXxB1q35Ixi+EFmcYgNUB+BKgpVHdMQ+CkAqoXo/kJAYNz8NDAVc1wYMmAf072NdQ+Y8sjn/hOwpzn+qUzX3DDcVTPszXX/Dk9izn3DzPHBtV4AZpDC47MsdjrP+sOIfAggAqutaPgmH9R3TJowAFI1ASj6k4QuFw6zHDJimCV2PIRTRoakKvtu8GwFfe8eKsBAiAFoiQbFbK6sjWPQmxfNOQZ0ejBTAaAZiYavwR2oH0MzFMdDUR4nOmhh/Qd6EWHg3ZUy+ROSf/Tf7m6jwEg+yTr8R44cepjueuR4btxG8aURDLyQ+AMCUgP8QeM+KX4ffHnTK1EU91YvfrPiEq6sqbr/tlhvXfr1uh8JMQxRN3QKWkFIiZsS7KeLRwKGSSoAUK8vtWEVSEiteQDSDSAHHyZY9qUBKOtDuO662KyxJI3gUSB4BRIx4PGQDBDPv14n63wExcgrJj98Ajtb3YBn9kEOxGmROWkmKtpWJKiCUKEnDw0TdYcbGUrfkKXTjrV52Dwcv/zN4717Q80+A13sBkwERYxyc/yXqvv7iR7c+/Ngb1eVpW+rq6l49/8xxty7/6tvJySlpfw4H/aZpShUAjDhAbW3tMGN6Z2nwhBYwkQSItnjEHM/Oaw3Q+XMh3381Tr4d1UQ7sP8b4LyxQKOwnguNoGgMQeCSKNgzEnTtGJA4Sty4Hdi4M5c3HbmKSV4FEGBK0DnDQYMGAzlDiLUe4GYCNrwPWvMZ6IY5QHg0uMHyzlS9LIja3bf9zb0hP/aGz7eCn3/l0IPnnTNtPAvXxEB70NHa0rw5JyNtfG1jG1gAbEjoegxGTD9GvPH2XgAMj0pWgtohiBHYDAG54wD5CqAICx+y6mDgILD3Y2DMdUCt0WGWBNVmkbYpwd/bwY7BoKyhoBsAutMkpgigCpDbAY4IC5Qog0wTtPNd8KK3gNPGAmOvAi8S1pcXOADsfPFX3Lqx9G82pv+tN331JeGPF309W3V7Aq0+36V/ePr5v3bNSgYDMCXDZIbD6UC0Q/HG8SAJAmwAxLfDRgAADvBJREFUVHCH2TEDrIOrPKBrfnZMBOP4PYodVLYJKFsB9PMCqjPu+eLmptoATQVUAocJ8ihBFmvg2gRwixuyUQEHCFAAcvuB5U+BF7wN5PaGuP1u8NduS1biFmDns5/z0N+/+Hc79//eBbqvpASGvMAkx1WKM2lpe0t9pdvpAIEgJUOPGchKTWQBM2CVWuOnUACVrcl1yqemFQy2tQI5M4E+Ocd4iIgBAbYlAFs+Aza/ARpIQJoHUO2AzQ7YNEBTAJuwsNfiNqDBem4DyMug9l3AYzeCl68EeXpAPPUozI0ZQBSAEQBvf/YghauuxepJf1dTUv6h2CrcWGH35hwKB0MDG+sqvzp/+lmz6loCABGiuoFuGW5s3rJtkclUeEL/rtkNNHwI0NBipRhCOXa2uSBmTgR/t4JgckdEGpdabEDtUWDLdtDwFFD/PMCWBBgaYBfW6QDgIOtvIkAZJqjlELDwDfCTLwDtMVBiPyivPgQ+mA+uA6CHQHueraO6dWdy83e1/8jclX80ljCCDeWe5IzWjJT0rXbV7Nev/4DClvYQDAkkue34+puVCyChgZSu8bIsqHk3MPo6oLbGUgk7pFZFYQhJ7MsA5o4HNq8EouYx7iJBECrAAWD7KtDa9UBWHaiAQWkGKFMHJQWJtCaQeRRUthZ44QXwX94BHS4HNDcoZyjOffk+HC3NhVkFUCQA2vpMPcpXTuGWjUf/o9uhho87yz3v8ku+TMrtNba6wYdsrw0/u+kXq4URvCEmlW0MJakjWKQzniDukQvsLmGoccK1uQC7B3AmAokZoKGt4PcfA/aUW/bZ2ekbJ3FpAtKI/zUBEe+UY90iesUOKJrVFUsqbCPOxtWPX401RxNxuIiApgbQ6j8cQf2emVy/5tA/M1flXwGotrI4VtMql/bsmjE5L78gJ2oy8lO1rrv3HnxJGsYagGaBhAoioGIz0ZhrgViQENKPm3iHUGYCLWmgqdNBAxzAxl2WOR7fWCSE5dFUuxWNq4oFjBpPXUQ8OVZcGHjF1bj0wcvxRa0HR+oEqPYQaPH9m6m1aDrXryv7Z+eq/KtpTX1VUaiuUX0/JVkMyMzN75OUnEpLl65wmMHKF4WWcACgC4iECqkTVbSBzpwJ1DZYsYo4Pg+DRdwtKsg5AmLOdKAwCSg6DIRjx3vFY4Add3YE7tAS4X76ARROPxPv1Wloa9FBGz5nfPjoq2B1Lteu9P2PbOq9aNZ88hsrb5w5a87vy4q+dz/34punGW1FO4Wn62iG+imgZDFLooJrgZlXgHfvBAwJKDaQagNrdkBzAk43YHcDDhfI6wYKTBCXgQOl4KYyUGMzuK4RlOIF7Hbgq23gtqBlVjMngmZdDyALUkqI4v3gBW8W4+C2n3PjllX/47ue58yZQxt3luaOHjX0wU+XfjvUk+g401exO6h4uqdLxp9A6ixmBmVcRJhyFbi9FmgPAgoBqsZQHQS7E7A5ALsTcLjij60YiBIUIJPAiQaofj+w4CXwzkOgQb0hZt0ImT4SCBHQdBi0YVEbb/zieSW9yzPG/gXhf3duP/kPC6TkjszS9Yg70Li3uNOOE3pOlRCPM2gk2fKBEbcSe1OASJvVnqLarHjJ5orHOw6rDme3A14XyKsD7fuBVQvAOzeB+vQFJlwJ6nU6ZGkAaNvHtOfzOpTsfE3NyHs1tm9h0081n//qj5uoyf1PZ9DPpGHMgKNfIvpPBWxesDsRcHoAmwq4NZABQAmC9XpQ7QFgw1qwbAcNmAbqNprZm01cVcdUt6OeytctgzA/ceUPXhXY+pr8qcf8X//1FzXjIkpLDdsaG2omsGmOgdCGQ5rdGVoXQNjZ1C0xXJABoeqkqD4GtVJSvo9jgQr4qopJ8FHFk7LHOfCMQ+3Lf8X/yfH+r/j9oDETNlNkcCnsvr0UawsJESMITyKnZekyBgfq1DbslRLQNOCZZ/i/ObZOgM44+2JNKKqNJSMQDIhQMBjYu2PtCYM5fepMVbMl2CFUGDJC0VAouGXNsd/fmH7xdXY22QtShM2uEUvJYJbsdLUvnf9cZ5vBkHGzKdGb4PQkJROTxoJczOSkcExljz0kYETBMDkcVbi9zRXdtvJ+CQDTZv2CNGei5nao8LVHEQlxbO3SJ04CbOqse23JGW4YIRPR1oCxYslzEgB+89I7VFtVq0GPEEERgGRVVaxCJYEb6wNorC3jcKQ5tnH1N3wCQAsWfvLKmDGjrgeALVt38BU33nOP3lx8Qrb74p9eve+CGef+DiB8t+V7vu3e3940bc7Fbw9M4LlnnzX1tqQk71CHwyFOrD8xfO3tZnlF9Y7nX5r/1Mrl8xdn9p7SZ9kHz3yflpYajxaJj+UZx/YTMjP5/QHfnu8PLbrr9wvvYcW4dMvip19WhEBTUxMmXHzXrEjFmiUnmHD+OVd8t+Dxt7Iy04mZ+bob73+gvB2v/vKmGQ+PHD70crfblWvVADoajvlYZQXA6jUbGh585Im+zdX7/CfoQWlpaZSZmSMAICW5jJnlSTtfUlOS7RmZ2QIAvMm1UIi9MwZ2eeHcc6ffYrfbwcdttuXjAuG0tAy1Z4+eo/v26f3Jo2lJD32zYd/S9IxMJS0tjY7tiuu4jzs38RIBWVmZyb169bhW09Ted/1u/lc52dlCCAGhKCBpnEQRpDozMrKyleysDEv1Vclx57xzll82++IJJATF+7pP3BXckSE0NOODxSvv7ADnBICkBMJRq1EhaphwaBp+uMNHMigSNcAAYjowpE+X8yZPmToJpCKqmygpb8DBw8UwJFupgMlIdNsxcsQAuJ02pKal0/XXXfHbtZvvK168fC0nJKQQlLiLt9tATs1q7IzooKjOhb26Uq+CTBABw4YNGa/gnVA0JkFg6DEGQZ4MkDRYj0lEdBNEgD+ozxk79rT+0ZiEKSVWfrsZoXAkrlEBxNKK5Fli/6GixWs+f3vhKRVF3ZDwB3UwGE63l556/OGZ6Rnp+db2bYCZ2eWwj2wPRgEiRKJRzJwxbZKECn9Yx9HiGky56Mo2Jdz2OIOrhVCZSQgCD5016+K7n/rt/QozI797D8XpdA15+OGHx9rs7iSQClLdJISNJWlEHCOWYFBUu3TWmW8/cM8dqWCAFRs4GhgcisRgSkYwaoKN6En8w0aMwlED/mAUQhB8Ib2fSSrag1FIydi7c11xc0vrbmaGBCkSMFhK4Wvztew9UPrMj0qukaiJxlarm9TtzcCwsVOGg3kEs9VWx/G12dASAAjWHomUdDS2BsAgbN21ByLU8qThL3k+noJ2HAsXLlpWcOuNV17idCVAUQUGjRpywcP3XdfL405QQIKssQoca92SMIyYMyUlNbm5NQgJRm1DC0zTqGzzhzLDUQOBYARsxk6RXEbJ5w+CSYOqKrDblaotO490GTmsL4iAC+dc0wNAD4BOaFwnIrS1NM878P32e2656ZqXTgIoFImisra5s43OlETSKvnGxVQJQUDM0CGI0Orzw2PXUVnbDJMZNo0BoZ6yIY5IMVp9ftS1huBy2lFV05ibnNG1P1QHdfDP8VsqQQQVQIiB8rpmMBOWfP51TTAcXFXX2DaiLRBGLGZA0MmKKJlhpanFhxZ/DE6HDZ6khPfuffS3s359/729uuR3gdOhxtv74sJnvPgk2YQgaLkF/Z7J7T7ik+qS7XUnAOQPhFDrrwaI0FDbiGeeffEQbM5S2G2WazFi4sHrzuzt6TKoQAiBtvYIfNFqRNUUSGZ4E1Nw/pljb/96g/ew06aWG4rCiJkUMXj8g7fOubCoshkxU8LldGLv1k17axouGR8yBEioCPiCYKFCSoY30QkpY2AGVFUgFIzgm1VrazauXnKpSe4J5bVNqGvyIzXRjsmnDRwbdV28aOWHjzIA5A6epfZKx9jW9hBaAj5kpCSgpqqqlIKNp//yvltuE7aEUdKV5urYL82S2dI/lcLHHn8o2a4AOemJWnZ2WmF1CU4EqD0YotKGdkAIMCsgo/lVbj360vHb93Pyrn58Z3ndQxAKbBD4avGy9XOv7zG+pc0PQzJGTDy3+8jTp62IGRIMq3pgszuoJSxRVdYEu01BqL2MIY2FtU1t4+t9BnuSUui5B+/4hlX7WiKFx4w5/abTp5/XpcXXDjCja5oTPbPUxd82Hdqopo/oeri8Hi2+CIoqgdFTZ91h6tFrJo75LMRgaRp6gmazJ27eXwNFMGqbG2VtdfW6jPw+D99y7WUzInpMMkPEmCkqIcIMM2CQEjPhbGppRzAURjgSRlVlRfNJJmaYBhp9QRiKC6k5LmbVfVJeYzC4PgiOqW7KSnGgogGfbly7sapb/8GXNQcNVLbrMFQP6YobprCD2IAmI1BgICc1Babaindefu9lm+LY1BgkLgu4RaY3AXD1XSUblj4NAJu2OhYZid5VhRPPya6qDqOsEhjcZ8rP592X0PjJe4uf37xhe1n+4PHdagM6yiqcFFEykgybJwmmAZsZgEMGoJkmkrQYvt++5s9R9oy9/LJLbtlW1EKykz4YJguYZINUHJCaC41BO5JdLgTLy/ZqiWl7TgKosdUvUzIzwB4vdMMX36t+4lFV38ppOb1JpKRCGrqUahrv2LF53rrtBw6NmTL9Lmd2RmJaThpEQjJc3kQEIxEg6EO4uR5lZdtbv/t4+RMJXudzoUjaYJmSTXn5eXB6VEh3IQDrZ8Zk85bD29bnnG3m9ls5Ytzp6QHdQGU4SN37jfqVmr3Tt371qrOLShvf7T1+6mh7XjYSM9ORmp6Edj0GvaEVoSoDzdXlgTXfLHpBBn2Lxk+eujocUyjB5YBpyk7nYbAAq04YihPsSYTmEvBVHt616q0XZhktRXxSquHM7OuJ+EOnA4KYCKS4d3H7vhOUfy17lMuIYiJrKQThJOLoTq5bUQsASvool4RnOOxJuax6VShJBBliirVFobdWCFtst1n1bdSKdmfbDek8A858BWaAKda0lyvmV5xAtgU39WBofQGAjACx3gwyAzo3rf7a3u1MivnDfdieVshauhP2TAHDD+j1BiK1NQL+HbJpp588fXozZK/4th8Rj0qtfj9SuKO4AJAkgUpPdte9/sMrGf93/N/xkx3/Dxi9weER02p3AAAAAElFTkSuQmCC';
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-horus-ui-logo]').forEach(img => {
+        img.src = HORUS_UI_LOGO_DATA;
+    });
+});
+</script>
 </head>
 <body>
     <section class="print-report-header" aria-hidden="true">
@@ -774,11 +957,14 @@
     </section>
 
     <header>
-        <div class="horus-brand-block">
-            <h1>SURVEILLANCE TACTIQUE</h1>
-            <div class="horus-version-line">
-                <strong>HORUS Mobile V1.0.1</strong><span>— Créé par @HBB</span>
-                <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS" onclick="openHorusDiagnostic()">i</button>
+        <div class="horus-screen-brand">
+            <img class="horus-screen-logo" src="" data-horus-ui-logo alt="HORUS">
+            <div class="horus-brand-block">
+                <h1>SURVEILLANCE TACTIQUE</h1>
+                <div class="horus-version-line">
+                    <strong>HORUS Mobile V1.0.2</strong><span>— Créé par @HBB</span>
+                    <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS" onclick="openHorusDiagnostic()">i</button>
+                </div>
             </div>
         </div>
         <div id="clock" style="font-family: monospace; font-size: 0.75rem; color: #888;">00:00:00</div>
@@ -831,7 +1017,7 @@
     <div class="action-bar">
         <button class="btn-action b-save" onclick="exportJSON()">📦 Exporter</button>
         <button class="btn-action b-load" onclick="triggerFile()">📥 Importer</button>
-        <button class="btn-action b-pdf" onclick="printReport()">📄 PDF</button>
+        <button class="btn-action b-pdf" onclick="openPdfExportChoice()">📄 PDF</button>
         <button class="btn-action b-clear" onclick="askClear()">🗑️ Reset</button>
     </div>
 
@@ -887,12 +1073,39 @@
         <div class="modal-content">
             <h3 style="margin-top:0; font-size:1rem;">Média associé à l'événement</h3>
             <div id="mediaModalDetails" class="media-details"></div>
-            <div id="mediaPreviewWrap"></div>
+            <div class="media-preview-stage">
+                <button id="mediaPrevBtn" type="button" class="media-nav-btn prev" aria-label="Média précédent" onclick="navigateMedia(-1)">‹</button>
+                <div id="mediaPreviewWrap" style="width:100%;"></div>
+                <button id="mediaNextBtn" type="button" class="media-nav-btn next" aria-label="Média suivant" onclick="navigateMedia(1)">›</button>
+            </div>
+            <div id="mediaNavCounter" class="media-nav-counter"></div>
             <div class="modal-buttons">
                 <button class="btn-modal" style="background:#555" onclick="closeMediaModal()">Fermer</button>
             </div>
         </div>
     </div>
+
+    <div id="pdfChoiceModal" class="pdf-choice-overlay" role="dialog" aria-modal="true" aria-labelledby="pdfChoiceTitle">
+        <div class="pdf-choice-dialog">
+            <div class="pdf-choice-head">
+                <h3 id="pdfChoiceTitle">Choisir le contenu du rapport PDF</h3>
+                <button type="button" class="btn-modal" style="background:#555;min-width:auto;padding:6px 10px;" onclick="closePdfChoice()">✕</button>
+            </div>
+            <div class="pdf-choice-body">
+                <p id="pdfChoiceInfo" class="pdf-choice-info"></p>
+                <button type="button" class="pdf-choice-btn" onclick="startPdfPrint(false)">
+                    <strong>📄 PDF sans média</strong>
+                    <span>Rapport procédural classique, identique au rapport actuel.</span>
+                </button>
+                <button id="pdfWithMediaBtn" type="button" class="pdf-choice-btn with-media" onclick="startPdfPrint(true)">
+                    <strong>🖼️ PDF avec médias</strong>
+                    <span>Vignette dans la ligne de l’événement + annexe photographique en fin de rapport.</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <section id="printMediaAnnex" aria-hidden="true"></section>
 
     <div id="confirmModal" class="modal">
         <div class="modal-content">
@@ -920,6 +1133,7 @@
         let currentRowToEdit = null;
         let currentGpsRow = null;
         let currentMediaRow = null;
+        let currentMediaIndex = 0;
         let pendingGeolocation = null;
         let pendingMedia = [];
         let mediaCaptureTriggeredAt = null;
@@ -942,7 +1156,7 @@
         let sessionId = createHorusId('SES');
 
         const HORUS_APP_NAME = 'HORUS Mobile';
-        const HORUS_APP_VERSION = '1.0.1';
+        const HORUS_APP_VERSION = '1.0.2';
         const HORUS_APP_AUTHOR = '@HBB';
 
         // ============================================================
@@ -1363,40 +1577,68 @@
             return `<button type="button" class="media-indicator" title="${list.length} photo(s) déclarée(s)" aria-label="Consulter le média">📷${count}</button>`;
         }
 
-        function openMediaModal(row) {
-            if (!row || !Array.isArray(row._media) || !row._media.length) return;
-            currentMediaRow = row;
-            const list = row._media;
-            const first = list[0];
-            const when = first.triggeredAt ? new Date(first.triggeredAt).toLocaleString('fr-FR') : 'non renseigné';
-            const size = first.fileSize ? `${Math.round(first.fileSize/1024)} Ko` : 'non renseignée';
-            const formatLabel = isHeicLike(first) ? 'HEIC / HEIF' : (first.fileType || 'image');
+        function renderCurrentMedia() {
+            if (!currentMediaRow || !Array.isArray(currentMediaRow._media) || !currentMediaRow._media.length) return;
+            const list = currentMediaRow._media;
+            currentMediaIndex = Math.max(0, Math.min(currentMediaIndex, list.length - 1));
+            const item = list[currentMediaIndex];
+
+            const when = item.triggeredAt ? new Date(item.triggeredAt).toLocaleString('fr-FR') : 'non renseigné';
+            const size = item.fileSize ? `${Math.round(item.fileSize/1024)} Ko` : 'non renseignée';
+            const formatLabel = isHeicLike(item) ? 'HEIC / HEIF' : (item.fileType || 'image');
+
             document.getElementById('mediaModalDetails').innerHTML =
                 `<strong>Photo(s) déclarée(s) :</strong> ${list.length}<br>`+
+                `<strong>Média affiché :</strong> ${currentMediaIndex + 1} / ${list.length}<br>`+
                 `<strong>Déclenchement :</strong> ${when}<br>`+
-                `<strong>Fichier original :</strong> ${first.fileName || 'nom non disponible'}<br>`+
+                `<strong>Fichier original :</strong> ${item.fileName || 'nom non disponible'}<br>`+
                 `<strong>Format :</strong> ${formatLabel}<br>`+
                 `<strong>Taille :</strong> ${size}`+
-                (isHeicLike(first) ? `<br><strong>Archive :</strong> original HEIC/HEIF conservé intact` : '');
+                (isHeicLike(item) ? `<br><strong>Archive :</strong> original HEIC/HEIF conservé intact` : '');
+
             const wrap = document.getElementById('mediaPreviewWrap');
-            if (first._previewUrl) {
-                wrap.innerHTML = `<img class="media-preview" src="${first._previewUrl}" alt="Aperçu du cliché">`+
-                    (first.previewFormat === 'jpeg-preview'
+            if (item._previewUrl) {
+                wrap.innerHTML = `<img class="media-preview" src="${item._previewUrl}" alt="Aperçu du cliché ${currentMediaIndex + 1}">`+
+                    (item.previewFormat === 'jpeg-preview'
                         ? '<p style="font-size:.68rem;color:#9ca3af;margin:8px 0 0;">Aperçu JPEG généré localement. Le fichier HEIC/HEIF original reste celui exporté dans l’archive HORUS.</p>'
                         : '');
-            } else if (first._previewPreparing) {
+            } else if (item._previewPreparing) {
                 wrap.innerHTML = '<p style="font-size:.75rem;color:#9ca3af;margin:12px 0 0;">Préparation de l’aperçu en cours…</p>';
-            } else if (isHeicLike(first) && first._file) {
+            } else if (isHeicLike(item) && item._file) {
                 wrap.innerHTML = '<p style="font-size:.75rem;color:#f59e0b;margin:12px 0 0;"><strong>HEIC/HEIF conservé.</strong><br>Ce navigateur ne sait pas décoder ce fichier pour l’aperçu. Le média original sera néanmoins conservé et exporté dans l’archive HORUS.</p>';
             } else {
                 wrap.innerHTML = '<p style="font-size:.75rem;color:#9ca3af;margin:12px 0 0;">Le média est déclaré dans le JSON mais le fichier image n’est pas chargé dans cette session.</p>';
             }
+
+            const prev = document.getElementById('mediaPrevBtn');
+            const next = document.getElementById('mediaNextBtn');
+            const counter = document.getElementById('mediaNavCounter');
+            const multi = list.length > 1;
+            prev?.classList.toggle('media-nav-visible', multi);
+            next?.classList.toggle('media-nav-visible', multi);
+            counter?.classList.toggle('media-counter-visible', multi);
+            if (counter) counter.textContent = multi ? `${currentMediaIndex + 1} / ${list.length}` : '';
+        }
+
+        function openMediaModal(row) {
+            if (!row || !Array.isArray(row._media) || !row._media.length) return;
+            currentMediaRow = row;
+            currentMediaIndex = 0;
+            renderCurrentMedia();
             document.getElementById('mediaModal').style.display = 'flex';
+        }
+
+        function navigateMedia(direction) {
+            if (!currentMediaRow || !Array.isArray(currentMediaRow._media) || currentMediaRow._media.length < 2) return;
+            const count = currentMediaRow._media.length;
+            currentMediaIndex = (currentMediaIndex + direction + count) % count;
+            renderCurrentMedia();
         }
 
         function closeMediaModal() {
             document.getElementById('mediaModal').style.display = 'none';
             currentMediaRow = null;
+            currentMediaIndex = 0;
         }
 
         function serializableMedia(media) {
@@ -2283,6 +2525,10 @@
             if (e.key === 'Escape' && document.getElementById('horusDiagnosticModal')?.classList.contains('open')) {
                 closeHorusDiagnostic();
             }
+            if (document.getElementById('mediaModal')?.style.display === 'flex') {
+                if (e.key === 'ArrowLeft') navigateMedia(-1);
+                if (e.key === 'ArrowRight') navigateMedia(1);
+            }
         });
 
         descInput.addEventListener('input', previewDictatedType);
@@ -2307,14 +2553,187 @@
         });
 
 
-        let printOrderReversed = false;
-        function printReport() {
-            // Préparation explicite utile sur Safari/Brave mobile, où beforeprint peut être tardif.
-            prepareMobilePrint();
-            requestAnimationFrame(() => {
-                setTimeout(() => window.print(), 40);
-            });
+        // Rapport PDF : choix sans média / avec médias, aligné sur HORUS Bureau.
+        function getRowsWithDeclaredMedia() {
+            return Array.from(tableBody.querySelectorAll('tr')).filter(row => Array.isArray(row._media) && row._media.length);
         }
+
+        function getLoadedPhotoMedia(row) {
+            return (Array.isArray(row._media) ? row._media : []).filter(m =>
+                m && m._previewUrl && String(m.fileType || '').toLowerCase().startsWith('image/')
+            );
+        }
+
+        function openPdfExportChoice() {
+            const rows = getRowsWithDeclaredMedia();
+            if (!rows.length) {
+                startPdfPrint(false);
+                return;
+            }
+            const declared = rows.reduce((n, r) => n + (r._media?.length || 0), 0);
+            const loaded = rows.reduce((n, r) => n + getLoadedPhotoMedia(r).length, 0);
+            const info = document.getElementById('pdfChoiceInfo');
+            const withBtn = document.getElementById('pdfWithMediaBtn');
+
+            if (info) {
+                info.textContent = `${declared} média${declared > 1 ? 's' : ''} déclaré${declared > 1 ? 's' : ''} dans la surveillance. ${loaded} photographie${loaded > 1 ? 's' : ''} disponible${loaded > 1 ? 's' : ''} pour le rapport.`;
+            }
+            if (withBtn) {
+                withBtn.disabled = loaded === 0;
+                withBtn.title = loaded === 0
+                    ? 'Importez l’archive HORUS contenant les médias pour produire ce rapport.'
+                    : '';
+            }
+            const modal = document.getElementById('pdfChoiceModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closePdfChoice() {
+            const modal = document.getElementById('pdfChoiceModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function clearPrintMediaDecorations() {
+            document.body.classList.remove('print-with-media');
+            document.querySelectorAll('.print-media-thumb-wrap').forEach(el => el.remove());
+            const annex = document.getElementById('printMediaAnnex');
+            if (annex) annex.innerHTML = '';
+        }
+
+        function escapeHtmlForPdf(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatMediaTimestampForPdf(value) {
+            try {
+                const d = new Date(value);
+                if (!Number.isNaN(d.getTime())) return d.toLocaleString('fr-FR');
+            } catch (_) {}
+            return String(value || '');
+        }
+
+        function buildPrintMediaDecorations() {
+            clearPrintMediaDecorations();
+            document.body.classList.add('print-with-media');
+
+            // A l'écran, les événements sont antichronologiques. L'annexe est construite
+            // directement dans l'ordre chronologique attendu pour le rapport.
+            const chronologicalRows = Array.from(tableBody.querySelectorAll('tr')).reverse();
+            const annex = document.getElementById('printMediaAnnex');
+            if (!annex) return 0;
+
+            annex.innerHTML =
+                `<div class="annex-head">`+
+                `<div class="annex-title">ANNEXE PHOTOGRAPHIQUE</div>`+
+                `<div class="annex-subtitle">SURVEILLANCE DU ${escapeHtmlForPdf(isoToFrenchDate(sessionDateISO))}</div>`+
+                `</div>`;
+
+            let photoIndex = 0;
+
+            chronologicalRows.forEach(row => {
+                const photos = getLoadedPhotoMedia(row);
+                if (!photos.length) return;
+
+                const cells = row.querySelectorAll('td');
+                const heure = cells[0]?.innerText.trim() || '';
+                const type = cells[1]?.innerText.trim() || '';
+                const detailsCell = cells[5];
+                const desc = row.dataset.rawDesc || detailsCell?.innerText.trim() || '';
+
+                // Vignettes dans la cellule Détails, comme HORUS Bureau.
+                if (detailsCell) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'print-media-thumb-wrap';
+
+                    photos.slice(0, 3).forEach((m, i) => {
+                        const img = document.createElement('img');
+                        img.className = 'print-media-thumb';
+                        img.src = m._previewUrl;
+                        img.alt = `Photo ${i + 1}`;
+                        wrap.appendChild(img);
+                    });
+
+                    const label = document.createElement('span');
+                    label.className = 'print-media-thumb-label';
+                    label.textContent = photos.length > 1 ? `${photos.length} photos` : '1 photo';
+                    wrap.appendChild(label);
+                    detailsCell.appendChild(wrap);
+                }
+
+                // Annexes agrandies en fin de rapport.
+                photos.forEach(m => {
+                    photoIndex++;
+                    const item = document.createElement('article');
+                    item.className = 'annex-item';
+                    const fileName = m.fileName || `Média ${photoIndex}`;
+
+                    item.innerHTML =
+                        `<div class="annex-event"><strong>PHOTO ${photoIndex}</strong><span>${escapeHtmlForPdf(heure)}</span><span>—</span><span>${escapeHtmlForPdf(type)}</span></div>`+
+                        `<div class="annex-desc">${escapeHtmlForPdf(desc)}</div>`+
+                        `<img class="annex-image" src="${m._previewUrl}" alt="${escapeHtmlForPdf(fileName)}">`+
+                        `<div class="annex-meta">${escapeHtmlForPdf(fileName)}${m.triggeredAt ? ` — média déclenché : ${escapeHtmlForPdf(formatMediaTimestampForPdf(m.triggeredAt))}` : ''}</div>`;
+
+                    annex.appendChild(item);
+                });
+            });
+
+            return photoIndex;
+        }
+
+        function waitForPrintImages(timeout = 5000) {
+            const imgs = Array.from(document.querySelectorAll('.print-media-thumb, #printMediaAnnex img'));
+            if (!imgs.length) return Promise.resolve();
+            return Promise.race([
+                Promise.all(imgs.map(img =>
+                    img.complete
+                        ? Promise.resolve()
+                        : new Promise(resolve => {
+                            img.addEventListener('load', resolve, {once:true});
+                            img.addEventListener('error', resolve, {once:true});
+                        })
+                )),
+                new Promise(resolve => setTimeout(resolve, timeout))
+            ]);
+        }
+
+        async function startPdfPrint(includeMedia) {
+            closePdfChoice();
+            clearPrintMediaDecorations();
+
+            try {
+                if (includeMedia) {
+                    const count = buildPrintMediaDecorations();
+                    if (!count) {
+                        alert('Aucune photographie n’est disponible dans cette session. Importez l’archive HORUS complète pour imprimer les médias.');
+                        return;
+                    }
+                    await waitForPrintImages(5000);
+                    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                }
+
+                prepareMobilePrint();
+                requestAnimationFrame(() => {
+                    setTimeout(() => window.print(), 40);
+                });
+            } catch (err) {
+                console.error('Erreur génération PDF avec médias :', err);
+                clearPrintMediaDecorations();
+                alert('La préparation du rapport avec médias a échoué : ' + (err?.message || err));
+            }
+        }
+
+        let printOrderReversed = false;
+
+        function printReport() {
+            // Compatibilité conservée si une ancienne action appelle encore printReport().
+            openPdfExportChoice();
+        }
+
         function prepareMobilePrint() {
             const printDate = document.getElementById('printDate');
             if (printDate) printDate.textContent = isoToFrenchDate(sessionDateISO);
@@ -2323,11 +2742,15 @@
                 printOrderReversed = true;
             }
         }
+
         function restoreMobileScreenOrder() {
-            if (!printOrderReversed) return;
-            Array.from(tableBody.children).reverse().forEach(row => tableBody.appendChild(row));
-            printOrderReversed = false;
+            if (printOrderReversed) {
+                Array.from(tableBody.children).reverse().forEach(row => tableBody.appendChild(row));
+                printOrderReversed = false;
+            }
+            clearPrintMediaDecorations();
         }
+
         window.addEventListener('beforeprint', prepareMobilePrint);
         window.addEventListener('afterprint', restoreMobileScreenOrder);
 
@@ -2340,7 +2763,7 @@
 <div id="horusDiagnosticModal" class="horus-diagnostic-overlay" role="dialog" aria-modal="true" aria-labelledby="horusDiagnosticTitle">
   <div class="horus-diagnostic-dialog">
     <div class="horus-diagnostic-head">
-      <div><h3 id="horusDiagnosticTitle">HORUS Mobile V1.0.1</h3><p>Diagnostic technique et compatibilité</p></div>
+      <div class="horus-diagnostic-title-wrap"><img class="horus-diagnostic-logo" src="" data-horus-ui-logo alt="HORUS"><div><h3 id="horusDiagnosticTitle">HORUS Mobile V1.0.2</h3><p>Diagnostic technique et compatibilité</p></div></div>
       <button id="horusDiagnosticClose" class="horus-diagnostic-close" type="button" aria-label="Fermer" onclick="closeHorusDiagnostic()">×</button>
     </div>
     <div id="horusDiagnosticBody" class="horus-diagnostic-body"></div>
