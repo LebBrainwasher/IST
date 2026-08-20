@@ -167,6 +167,53 @@
             print-color-adjust: exact;
         }
 
+        /* HORUS Mobile — immatriculation tactile : toucher la plaque copie sa valeur
+           sans déclencher le modal de modification de la ligne. */
+        #logTable .plate-tag {
+            cursor: copy;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            position: relative;
+        }
+        #logTable .plate-tag::after {
+            content: '';
+            position: absolute;
+            inset: -8px -6px;
+        }
+        #logTable .plate-tag:active {
+            transform: scale(.96);
+            background: #fde68a;
+        }
+        .plate-copy-toast {
+            position: fixed;
+            left: 50%;
+            bottom: max(22px, env(safe-area-inset-bottom));
+            transform: translate(-50%, 14px);
+            z-index: 13000;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,.18);
+            background: #111827;
+            color: #fff;
+            font-size: .74rem;
+            font-weight: 800;
+            box-shadow: 0 12px 35px rgba(0,0,0,.38);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .16s ease, transform .16s ease;
+            white-space: nowrap;
+        }
+        .plate-copy-toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        @media print {
+            .plate-copy-toast { display: none !important; }
+            #logTable .plate-tag { cursor: default !important; }
+            #logTable .plate-tag::after { display:none !important; }
+        }
+
         .action-bar {
             display: flex;
             gap: 6px;
@@ -1069,6 +1116,8 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
 
+    <div id="plateCopyToast" class="plate-copy-toast" role="status" aria-live="polite"></div>
+
     <div id="mediaModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size:1rem;">Média associé à l'événement</h3>
@@ -1721,13 +1770,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function applyPlateStyle(rawText) {
             let clean = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const attrs = 'role="button" tabindex="0" title="Toucher pour copier l’immatriculation" aria-label="Copier l’immatriculation"';
             if (clean.length === 7 && /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(clean)) {
-                return `<span class="plate-tag">${clean.slice(0,2)}-${clean.slice(2,5)}-${clean.slice(5,7)}</span>`;
+                return `<span class="plate-tag" ${attrs}>${clean.slice(0,2)}-${clean.slice(2,5)}-${clean.slice(5,7)}</span>`;
             }
             if (/^[0-9]+[A-Z]+[0-9]+$/.test(clean)) {
-                return `<span class="plate-tag">${clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3')}</span>`;
+                return `<span class="plate-tag" ${attrs}>${clean.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3')}</span>`;
             }
-            return `<span class="plate-tag">${clean}</span>`;
+            return `<span class="plate-tag" ${attrs}>${clean}</span>`;
         }
 
         function normalizeToken(token) {
@@ -1923,6 +1973,82 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             cell.innerHTML = cell.innerHTML === '' ? '👥' : '';
         }
+
+        // HORUS Mobile — copie d'immatriculation indépendante du clic de modification.
+        let plateCopyToastTimer = null;
+
+        function normalizePlateForCopy(value) {
+            const raw = String(value || '').toUpperCase().trim();
+            const compact = raw.replace(/[^A-Z0-9]/g, '');
+            if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(compact)) {
+                return `${compact.slice(0,2)}-${compact.slice(2,5)}-${compact.slice(5,7)}`;
+            }
+            if (/^[0-9]+[A-Z]+[0-9]+$/.test(compact)) {
+                return compact.replace(/([0-9]+)([A-Z]+)([0-9]+)/, '$1 $2 $3');
+            }
+            return raw;
+        }
+
+        function showPlateCopyToast(plate, ok = true) {
+            const toast = document.getElementById('plateCopyToast');
+            if (!toast) return;
+            toast.textContent = ok ? `Immatriculation ${plate} copiée` : `Copie impossible : ${plate}`;
+            toast.classList.add('show');
+            clearTimeout(plateCopyToastTimer);
+            plateCopyToastTimer = setTimeout(() => toast.classList.remove('show'), 1900);
+        }
+
+        async function copyPlateToClipboard(value) {
+            const plate = normalizePlateForCopy(value);
+            let ok = false;
+
+            // Méthode moderne lorsqu'elle est autorisée par le navigateur.
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(plate);
+                    ok = true;
+                }
+            } catch (_) {}
+
+            // Secours utile notamment lorsque l'application est ouverte en fichier local.
+            if (!ok) {
+                try {
+                    const area = document.createElement('textarea');
+                    area.value = plate;
+                    area.setAttribute('readonly', '');
+                    area.style.position = 'fixed';
+                    area.style.left = '-9999px';
+                    area.style.top = '0';
+                    area.style.opacity = '0';
+                    document.body.appendChild(area);
+                    area.focus();
+                    area.select();
+                    area.setSelectionRange(0, area.value.length);
+                    ok = document.execCommand('copy');
+                    area.remove();
+                } catch (_) {}
+            }
+
+            showPlateCopyToast(plate, ok);
+            return ok;
+        }
+
+        // Délégation sur le journal seulement : la plaque intercepte le toucher et
+        // stopPropagation empêche le <td class="col-desc"> d'ouvrir le modal d'édition.
+        tableBody.addEventListener('click', event => {
+            const plate = event.target.closest?.('.plate-tag');
+            if (!plate || !tableBody.contains(plate)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            copyPlateToClipboard(plate.textContent);
+        });
+        tableBody.addEventListener('keydown', event => {
+            const plate = event.target.closest?.('.plate-tag');
+            if (!plate || !tableBody.contains(plate) || !(event.key === 'Enter' || event.key === ' ')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            copyPlateToClipboard(plate.textContent);
+        });
 
         function openEditModal(row) {
             currentRowToEdit = row;
