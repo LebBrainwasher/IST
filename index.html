@@ -1928,10 +1928,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Commande de validation vocale :
-        // « VALIDER » n'est une commande que lorsqu'il termine la saisie.
+        // « VALIDER / VALIDÉ » n'est une commande que lorsqu'il termine la saisie.
         // La ponctuation dictée après le mot est tolérée.
         const dictatedValidateSuffix = /(?:^|\s)(?:VALIDER|VALIDÉ|VALIDE)\s*[.!?;,:-]*\s*$/i;
         let lastDictatedValidationAt = 0;
+
+        // Certains claviers de dictée mobile conservent en mémoire le texte déjà dicté
+        // et le réinjectent après que HORUS a vidé le champ. On mémorise donc la phrase
+        // brute qui vient d'être validée afin de la retirer d'un éventuel résultat cumulé.
+        let committedMobileDictation = '';
+
+        function normalizeMobileDictationWords(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, ' ')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+        }
+
+        function removeCommittedMobileDictation(currentText, committedText) {
+            const current = String(currentText || '').trim();
+            const committed = String(committedText || '').trim();
+            if (!committed) return current;
+            if (!current) return '';
+
+            // Cas normal : le moteur réinjecte exactement l'ancienne phrase en préfixe.
+            if (current.startsWith(committed)) {
+                return current.slice(committed.length).trimStart();
+            }
+
+            // Tolérance aux petites variations de ponctuation / accentuation du moteur.
+            const currentWords = normalizeMobileDictationWords(current);
+            const committedWords = normalizeMobileDictationWords(committed);
+            if (!committedWords.length || currentWords.length < committedWords.length) {
+                return current;
+            }
+
+            let same = 0;
+            for (let i = 0; i < committedWords.length; i += 1) {
+                if (currentWords[i] === committedWords[i]) same += 1;
+            }
+            if (same / committedWords.length < 0.84) return current;
+
+            // Retirer dans la chaîne originale le même nombre de mots que ceux
+            // appartenant à l'événement déjà validé.
+            const tokenRe = /\S+/g;
+            let count = 0, match, cutAt = 0;
+            while ((match = tokenRe.exec(current))) {
+                count += 1;
+                cutAt = tokenRe.lastIndex;
+                if (count >= committedWords.length) break;
+            }
+            return current.slice(cutAt).trimStart();
+        }
+
+        function purgeCommittedMobileDictationFromInput() {
+            if (!committedMobileDictation) return;
+
+            const before = descInput.value;
+            const after = removeCommittedMobileDictation(before, committedMobileDictation);
+
+            if (after !== before.trim()) {
+                descInput.value = after;
+                // Si seul l'ancien événement a été réinjecté, le champ reste vide.
+                // Dès qu'un nouveau texte apparaît après l'ancien préfixe, on conserve
+                // encore la référence jusqu'à ce que le moteur reparte réellement à zéro.
+                return;
+            }
+
+            // Si le moteur fournit désormais directement une nouvelle phrase indépendante,
+            // l'ancien tampon n'est plus nécessaire.
+            if (before.trim() && after === before.trim()) {
+                committedMobileDictation = '';
+            }
+        }
 
         function parseDictatedValidation(text) {
             const source = String(text || '');
@@ -1942,35 +2015,52 @@ document.addEventListener('DOMContentLoaded', () => {
             return { validate: true, text: cleaned };
         }
 
+        function resetMobileDictationAfterValidation(rawCommittedText) {
+            committedMobileDictation = String(rawCommittedText || '').trim();
+
+            // Vider immédiatement le champ.
+            descInput.value = '';
+
+            // Couper brièvement le focus aide aussi les claviers mobiles à fermer
+            // la composition vocale de la phrase précédente avant la suivante.
+            try { descInput.blur(); } catch (_) {}
+
+            setTimeout(() => {
+                descInput.value = '';
+                try { descInput.focus({ preventScroll: true }); }
+                catch (_) { try { descInput.focus(); } catch (_) {} }
+            }, 120);
+        }
+
         function handleDictatedValidation(event) {
-            // Ne rien déclencher pendant une composition IME encore active.
             if (event && event.isComposing) return false;
 
-            const parsed = parseDictatedValidation(descInput.value);
+            const rawBeforeValidation = String(descInput.value || '');
+            const parsed = parseDictatedValidation(rawBeforeValidation);
             if (!parsed.validate) return false;
 
-            // Le mot de commande ne doit jamais être enregistré dans l'événement.
             descInput.value = parsed.text;
             previewDictatedType();
 
-            // Une saisie vide après retrait de VALIDER n'est pas validée.
-            // On garde simplement le champ vide pour attendre une nouvelle action.
             const actionable = parseDictatedType(descInput.value).text.trim();
-            if (!actionable) return true;
+            if (!actionable) {
+                resetMobileDictationAfterValidation(rawBeforeValidation);
+                return true;
+            }
 
-            // Protection légère contre un doublon immédiat généré par certains claviers
-            // de dictée qui peuvent réémettre la même fin de transcription.
             const now = Date.now();
             if (now - lastDictatedValidationAt < 450) {
-                descInput.value = '';
+                resetMobileDictationAfterValidation(rawBeforeValidation);
                 return true;
             }
             lastDictatedValidationAt = now;
 
-            // addEntry() est exactement la fonction déjà appelée par la touche Entrée.
-            // Elle applique également le type dicté et IMMATRICULATION, puis remet
-            // le champ à zéro et lui redonne le focus.
+            // addEntry() applique exactement la même validation que la touche Entrée.
             addEntry();
+
+            // Important : addEntry() vide déjà le champ, mais le clavier vocal mobile peut
+            // réinjecter ensuite le texte précédent. On ferme donc explicitement ce tampon.
+            resetMobileDictationAfterValidation(rawBeforeValidation);
             return true;
         }
 
@@ -2705,6 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         descInput.addEventListener('input', (event) => {
+            purgeCommittedMobileDictationFromInput();
             previewDictatedType();
             handleDictatedValidation(event);
         });
