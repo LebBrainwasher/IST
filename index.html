@@ -1930,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Commande de validation vocale :
         // « VALIDER » n'est une commande que lorsqu'il termine la saisie.
         // La ponctuation dictée après le mot est tolérée.
-        const dictatedValidateSuffix = /(?:^|\s)VALIDER\s*[.!?;,:-]*\s*$/i;
+        const dictatedValidateSuffix = /(?:^|\s)(?:VALIDER|VALIDÉ|VALIDE)\s*[.!?;,:-]*\s*$/i;
         let lastDictatedValidationAt = 0;
 
         function parseDictatedValidation(text) {
