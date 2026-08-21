@@ -1761,11 +1761,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const phonetics = {
-            'ALPHA': 'A', 'ALFA': 'A', 'BRAVO': 'B', 'CHARLIE': 'C', 'CHARLY': 'C', 'DELTA': 'D', 'ECHO': 'E', 'ÉCHO': 'E',
-            'FOXTROT': 'F', 'FOX-TROT': 'F', 'GOLF': 'G', 'HOTEL': 'H', 'HÔTEL': 'H', 'INDIA': 'I', 'JULIETT': 'J', 'JULIET': 'J', 'JULIETTE': 'J',
-            'KILO': 'K', 'KILOS': 'K', 'LIMA': 'L', 'MIKE': 'M', 'NOVEMBER': 'N', 'OSCAR': 'O', 'PAPA': 'P', 'QUEBEC': 'Q',
-            'ROMEO': 'R', 'ROMÉO': 'R', 'ROME': 'R', 'SIERRA': 'S', 'SIRRA': 'S', 'TANGO': 'T', 'UNIFORM': 'U', 'UNIFORME': 'U', 'VICTOR': 'V', 'VICTORE': 'V', 'WHISKEY': 'W',
-            'X-RAY': 'X', 'XR': 'X', 'XRAY': 'X', 'YANKEE': 'Y', 'YANKEES': 'Y', 'YANKIE': 'Y', 'YANKI': 'Y', 'ZULU': 'Z', 'ZOULOU': 'Z'
+            'ALPHA': 'A', 'ALFA': 'A',
+            'BRAVO': 'B',
+            'CHARLIE': 'C', 'CHARLY': 'C', 'CHARLIES': 'C',
+            'DELTA': 'D',
+            'ECHO': 'E', 'ÉCHO': 'E', 'ECHOS': 'E',
+            'FOXTROT': 'F', 'FOX-TROT': 'F',
+            'GOLF': 'G',
+            'HOTEL': 'H', 'HÔTEL': 'H',
+            'INDIA': 'I',
+            'JULIETT': 'J', 'JULIET': 'J', 'JULIETTE': 'J',
+            'KILO': 'K', 'KILOS': 'K',
+            'LIMA': 'L',
+            'MIKE': 'M',
+            'NOVEMBER': 'N',
+            'OSCAR': 'O',
+            'PAPA': 'P',
+            'QUEBEC': 'Q',
+            'ROMEO': 'R', 'ROMÉO': 'R', 'ROME': 'R',
+            'SIERRA': 'S', 'SIRRA': 'S',
+            'TANGO': 'T',
+            'UNIFORM': 'U', 'UNIFORME': 'U',
+            'VICTOR': 'V', 'VICTORE': 'V',
+            'WHISKEY': 'W', 'WHISKY': 'W',
+            'X-RAY': 'X', 'XR': 'X', 'XRAY': 'X',
+            'YANKEE': 'Y', 'YANKEES': 'Y', 'YANKIE': 'Y', 'YANKI': 'Y',
+            'ZULU': 'Z', 'ZOULOU': 'Z'
         };
 
         function applyPlateStyle(rawText) {
@@ -1815,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const prefix = source.slice(0, match.index).trimEnd();
             const tail = source.slice(match.index + match[0].length);
-            const tokens = Array.from(tail.matchAll(/\S+/g));
+            const tokens = Array.from(tail.matchAll(/[^\s,;\/]+/g));
             const contributions = [];
             let consumed = 0;
             let compact = '';
