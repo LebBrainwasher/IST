@@ -1901,7 +1901,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dictatedTypePrefixes = [
             { pattern: /^(?:START|DÉPART|DEPART)\b\s*[:;,.\-]?\s*/i, type: 'START' },
             { pattern: /^(?:STOP|ARRÊT|ARRET)\b\s*[:;,.\-]?\s*/i, type: 'STOP' },
-            { pattern: /^(?:OBS|OBSERVATION)\b\s*[:;,.\-]?\s*/i, type: 'Observation' },
+            { pattern: /^(?:OBS|OBSERVATION|OBSERVATIONS)\b\s*[:;,.\-]?\s*/i, type: 'Observation' },
             { pattern: /^(?:CONT|CONTACT)\b\s*[:;,.\-]?\s*/i, type: 'Contact' },
             { pattern: /^(?:DIR|DIRECTION|CHGT\s+DIRECTION|CHANGEMENT\s+DE\s+DIRECTION)\b\s*[:;,.\-]?\s*/i, type: 'Chgt Direction' }
         ];
