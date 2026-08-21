@@ -2102,6 +2102,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetPendingGps(row._geolocation ? 'Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.' : 'Aucune position associée à la prochaine entrée.');
                 resetPendingMedia();
                 updateArchiveStatus();
+
+                // Après chaque nouvelle ligne validée (Entrée ou commande vocale VALIDER),
+                // revenir automatiquement sur OBSERVATION, type le plus fréquemment utilisé.
+                // Une commande vocale START / STOP / CONTACT / DIRECTION au début de la
+                // saisie suivante continuera naturellement à remplacer ce choix par défaut.
+                selectType('Observation');
+
                 descInput.focus();
             }
         }
