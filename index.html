@@ -866,8 +866,8 @@ document.addEventListener('DOMContentLoaded', () => {
     .horus-help-face{
         position:absolute;
         inset:0;
-        display:flex;
-        flex-direction:column;
+        display:grid;
+        grid-template-rows:auto minmax(0,1fr) auto;
         min-height:0;
         overflow:hidden;
         border:1px solid #34414d;
@@ -877,7 +877,23 @@ document.addEventListener('DOMContentLoaded', () => {
         backface-visibility:hidden;
         -webkit-backface-visibility:hidden;
     }
-    .horus-help-back{transform:rotateY(180deg)}
+    .horus-help-front{
+        z-index:2;
+        pointer-events:auto;
+    }
+    .horus-help-back{
+        z-index:1;
+        pointer-events:none;
+        transform:rotateY(180deg);
+    }
+    .horus-help-card.flipped .horus-help-front{
+        z-index:1;
+        pointer-events:none;
+    }
+    .horus-help-card.flipped .horus-help-back{
+        z-index:2;
+        pointer-events:auto;
+    }
 
     .horus-help-head{
         display:flex;
@@ -887,7 +903,6 @@ document.addEventListener('DOMContentLoaded', () => {
         padding:13px 14px;
         border-bottom:1px solid #303840;
         background:#12171d;
-        flex:0 0 auto;
     }
     .horus-help-title-wrap{
         min-width:0;
@@ -899,7 +914,6 @@ document.addEventListener('DOMContentLoaded', () => {
         width:38px;
         height:38px;
         object-fit:contain;
-        flex:0 0 auto;
     }
     .horus-help-head h3{
         margin:0;
@@ -926,11 +940,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     .horus-help-body{
-        flex:1 1 0;
         min-height:0;
-        overflow-y:auto;
+        height:100%;
+        overflow-y:scroll;
         overflow-x:hidden;
-        overscroll-behavior:contain;
+        overscroll-behavior-y:contain;
         touch-action:pan-y;
         -webkit-overflow-scrolling:touch;
         padding:12px;
@@ -1032,15 +1046,34 @@ document.addEventListener('DOMContentLoaded', () => {
         color:#fff;
     }
 
+
+    /* Correctif Safari / Brave iOS :
+       empêcher la face invisible de capter le swipe et isoler le scroll de la face visible. */
+    #horusHelpModal .horus-help-body{
+        position:relative;
+        z-index:3;
+        width:100%;
+        max-width:100%;
+        scrollbar-gutter:stable;
+    }
+    #horusHelpModal .horus-help-front,
+    #horusHelpModal .horus-help-back{
+        -webkit-transform-style:preserve-3d;
+        transform-style:preserve-3d;
+    }
+
     @media(max-width:420px){
         .horus-help-scene{
-            height:min(84dvh,690px);
-            max-height:calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)));
+            height:calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)));
+            max-height:690px;
+            min-height:420px;
         }
         .horus-help-body{
             min-height:0;
-            overflow-y:auto;
+            height:100%;
+            overflow-y:scroll;
             -webkit-overflow-scrolling:touch;
+            touch-action:pan-y;
         }
         .horus-help-key-grid{grid-template-columns:1fr}
         .horus-help-alpha{grid-template-columns:1fr 1fr}
