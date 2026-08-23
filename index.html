@@ -821,6 +821,229 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
+<style id="horusMobileHelpStyles">
+    .horus-help-trigger{
+        color:#9fe3b2;
+        border-color:#365b43;
+        font-weight:900;
+    }
+    .horus-help-trigger:active{transform:translateY(1px) scale(.98)}
+
+    .horus-help-overlay{
+        position:fixed;
+        inset:0;
+        z-index:12500;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:
+            max(12px, env(safe-area-inset-top))
+            12px
+            max(12px, env(safe-area-inset-bottom));
+        background:rgba(0,0,0,.82);
+        backdrop-filter:blur(4px);
+        -webkit-backdrop-filter:blur(4px);
+    }
+    .horus-help-overlay.open{display:flex}
+
+    .horus-help-scene{
+        width:min(560px,100%);
+        height:min(82vh,720px);
+        perspective:1400px;
+    }
+    .horus-help-card{
+        position:relative;
+        width:100%;
+        height:100%;
+        transform-style:preserve-3d;
+        transition:transform .58s cubic-bezier(.2,.75,.25,1);
+    }
+    .horus-help-card.flipped{transform:rotateY(180deg)}
+
+    .horus-help-face{
+        position:absolute;
+        inset:0;
+        display:flex;
+        flex-direction:column;
+        overflow:hidden;
+        border:1px solid #34414d;
+        border-radius:16px;
+        background:#171c22;
+        box-shadow:0 28px 80px rgba(0,0,0,.6);
+        backface-visibility:hidden;
+        -webkit-backface-visibility:hidden;
+    }
+    .horus-help-back{transform:rotateY(180deg)}
+
+    .horus-help-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        padding:13px 14px;
+        border-bottom:1px solid #303840;
+        background:#12171d;
+        flex:0 0 auto;
+    }
+    .horus-help-title-wrap{
+        min-width:0;
+        display:flex;
+        align-items:center;
+        gap:9px;
+    }
+    .horus-help-logo{
+        width:38px;
+        height:38px;
+        object-fit:contain;
+        flex:0 0 auto;
+    }
+    .horus-help-head h3{
+        margin:0;
+        color:#fff;
+        font-size:.86rem;
+        line-height:1.15;
+    }
+    .horus-help-head p{
+        margin:4px 0 0;
+        color:#8f9ba8;
+        font-size:.62rem;
+        line-height:1.25;
+    }
+    .horus-help-x{
+        width:34px;
+        height:34px;
+        border:0;
+        border-radius:9px;
+        background:#20262d;
+        color:#c3cbd3;
+        font-size:1.2rem;
+        cursor:pointer;
+        flex:0 0 auto;
+    }
+
+    .horus-help-body{
+        flex:1 1 auto;
+        overflow-y:auto;
+        -webkit-overflow-scrolling:touch;
+        padding:12px;
+        display:grid;
+        gap:9px;
+        text-align:left;
+    }
+    .horus-help-section{
+        padding:10px 11px;
+        border:1px solid #2c3640;
+        border-left:4px solid var(--help-accent,#4caf50);
+        border-radius:9px;
+        background:#11161c;
+    }
+    .horus-help-section h4{
+        margin:0 0 6px;
+        color:var(--help-accent,#75d38b);
+        font-size:.7rem;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    }
+    .horus-help-section p,
+    .horus-help-section li{
+        color:#c6ced6;
+        font-size:.67rem;
+        line-height:1.45;
+    }
+    .horus-help-section p{margin:0}
+    .horus-help-section ul{
+        margin:0;
+        padding-left:17px;
+        display:grid;
+        gap:4px;
+    }
+    .horus-help-section b,
+    .horus-help-key{
+        color:#fff;
+        font-weight:850;
+    }
+
+    .horus-help-key-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:7px;
+    }
+    .horus-help-key-item{
+        border:1px solid #303a44;
+        border-radius:8px;
+        padding:8px;
+        background:#0f1419;
+    }
+    .horus-help-key-item strong{
+        display:block;
+        margin-bottom:3px;
+        color:#72d88a;
+        font-size:.69rem;
+    }
+    .horus-help-key-item span{
+        display:block;
+        color:#aeb8c2;
+        font-size:.61rem;
+        line-height:1.35;
+    }
+    .horus-help-alpha{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:5px 9px;
+        font-size:.61rem;
+        color:#bcc5ce;
+    }
+    .horus-help-alpha div{
+        padding-bottom:4px;
+        border-bottom:1px dashed #29313a;
+    }
+    .horus-help-alpha b{color:#eef2f6}
+
+    .horus-help-foot{
+        display:flex;
+        gap:8px;
+        padding:10px 12px 12px;
+        border-top:1px solid #303840;
+        background:#12171d;
+        flex:0 0 auto;
+    }
+    .horus-help-action{
+        flex:1;
+        min-height:40px;
+        border:1px solid #3a4652;
+        border-radius:9px;
+        background:#222a32;
+        color:#eef2f6;
+        font-size:.7rem;
+        font-weight:800;
+        cursor:pointer;
+    }
+    .horus-help-action.primary{
+        border-color:#3b7650;
+        background:#176b36;
+        color:#fff;
+    }
+
+    @media(max-width:420px){
+        .horus-help-scene{height:min(84vh,690px)}
+        .horus-help-key-grid{grid-template-columns:1fr}
+        .horus-help-alpha{grid-template-columns:1fr 1fr}
+        .horus-help-logo{width:34px;height:34px}
+        .horus-help-head{padding:11px 12px}
+        .horus-help-body{padding:10px}
+    }
+
+    @media (prefers-reduced-motion: reduce){
+        .horus-help-card{transition:none}
+    }
+
+    @media print{
+        #horusHelpModal{display:none !important}
+        #horusHelpBtn{display:none !important}
+    }
+</style>
+
 </head>
 <body>
     <section class="print-report-header" aria-hidden="true">
@@ -1011,6 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="horus-version-line">
                     <strong>HORUS Mobile V1.0.2</strong><span>— Créé par @HBB</span>
                     <button id="horusVersionInfoBtn" class="horus-version-info" type="button" title="Informations techniques HORUS" aria-label="Informations techniques HORUS" onclick="openHorusDiagnostic()">i</button>
+                    <button id="horusHelpBtn" class="horus-version-info horus-help-trigger" type="button" title="Aide HORUS Mobile" aria-label="Ouvrir l'aide HORUS Mobile" onclick="openHorusHelp()">?</button>
                 </div>
             </div>
         </div>
@@ -3059,6 +3283,215 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
     </script>
+
+
+<div id="horusHelpModal" class="horus-help-overlay" role="dialog" aria-modal="true" aria-labelledby="horusHelpTitle">
+  <div class="horus-help-scene">
+    <div id="horusHelpCard" class="horus-help-card">
+
+      <!-- FACE 1 : GUIDE RAPIDE -->
+      <section class="horus-help-face horus-help-front">
+        <div class="horus-help-head">
+          <div class="horus-help-title-wrap">
+            <img class="horus-help-logo" src="" data-horus-ui-logo alt="HORUS">
+            <div>
+              <h3 id="horusHelpTitle">HORUS Mobile — Guide rapide</h3>
+              <p>Surveillance tactique • fonctions essentielles</p>
+            </div>
+          </div>
+          <button type="button" class="horus-help-x" aria-label="Fermer l'aide" onclick="closeHorusHelp()">×</button>
+        </div>
+
+        <div class="horus-help-body">
+          <div class="horus-help-section" style="--help-accent:#4caf50">
+            <h4>1 — Saisir un événement</h4>
+            <ul>
+              <li>Choisissez <b>START</b>, <b>STOP</b>, <b>OBS</b>, <b>CONT</b> ou <b>DIR</b>, puis saisissez ou dictez l’observation.</li>
+              <li><b>OBS — Observation</b> est le type courant pour la prise de notes.</li>
+              <li>La ligne validée est horodatée automatiquement.</li>
+            </ul>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#2196f3">
+            <h4>2 — Géolocalisation</h4>
+            <ul>
+              <li>Appuyez sur <b>📍 Position</b> avant de valider une ligne pour lui associer le point GPS de l’opérateur.</li>
+              <li>Un point déjà associé peut être consulté depuis la ligne ; les coordonnées peuvent être ouvertes volontairement dans un service cartographique.</li>
+            </ul>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#b027f5">
+            <h4>3 — Clichés photographiques</h4>
+            <ul>
+              <li>Appuyez sur <b>📷 Photo</b> pour prendre ou sélectionner un cliché avant la validation de l’événement.</li>
+              <li>Plusieurs médias peuvent être liés à une même ligne et consultés ensuite dans le visualiseur.</li>
+            </ul>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#ff9800">
+            <h4>4 — Corriger une ligne</h4>
+            <ul>
+              <li>Touchez une ligne déjà créée pour modifier son <b>type d’action</b> ou son <b>commentaire</b>.</li>
+              <li>Depuis cette même fenêtre, une ligne peut être <b>supprimée</b> après confirmation.</li>
+            </ul>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#00bfa5">
+            <h4>5 — Sauvegarder, rouvrir et PDF</h4>
+            <ul>
+              <li><b>Exporter</b> conserve la surveillance pour une reprise ou un transfert ultérieur ; avec des clichés, HORUS peut produire une archive contenant les médias.</li>
+              <li><b>Importer</b> permet de rouvrir une surveillance tactique exportée précédemment.</li>
+              <li><b>PDF</b> génère le rapport avec le choix <b>sans média</b> ou <b>avec médias</b> lorsque des photographies sont disponibles.</li>
+            </ul>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#7dd3fc">
+            <h4>6 — Poursuivre l’exploitation</h4>
+            <p>Une ou plusieurs surveillances HORUS peuvent ensuite être chargées dans <b>HORUS Analyseur de récurrences</b> afin de croiser les événements, véhicules, individus, lieux, contacts, médias et positions relevés.</p>
+          </div>
+        </div>
+
+        <div class="horus-help-foot">
+          <button type="button" class="horus-help-action" onclick="closeHorusHelp()">Fermer</button>
+          <button type="button" class="horus-help-action primary" onclick="toggleHorusHelpFace(true)">🎙️ Mots-clés dictée ↻</button>
+        </div>
+      </section>
+
+      <!-- FACE 2 : MOTS-CLES / DICTEE -->
+      <section class="horus-help-face horus-help-back" aria-label="Aide à la dictée">
+        <div class="horus-help-head">
+          <div class="horus-help-title-wrap">
+            <img class="horus-help-logo" src="" data-horus-ui-logo alt="HORUS">
+            <div>
+              <h3>HORUS Mobile — Dictée rapide</h3>
+              <p>Mots-clés, immatriculations et validation vocale</p>
+            </div>
+          </div>
+          <button type="button" class="horus-help-x" aria-label="Fermer l'aide" onclick="closeHorusHelp()">×</button>
+        </div>
+
+        <div class="horus-help-body">
+          <div class="horus-help-section" style="--help-accent:#4caf50">
+            <h4>Commandes de début de phrase</h4>
+            <div class="horus-help-key-grid">
+              <div class="horus-help-key-item"><strong>START / DÉPART</strong><span>Sélectionne START.</span></div>
+              <div class="horus-help-key-item"><strong>STOP / ARRÊT</strong><span>Sélectionne STOP.</span></div>
+              <div class="horus-help-key-item"><strong>OBS / OBSERVATION(S)</strong><span>Sélectionne Observation.</span></div>
+              <div class="horus-help-key-item"><strong>CONT / CONTACT</strong><span>Sélectionne Contact.</span></div>
+              <div class="horus-help-key-item"><strong>DIR / DIRECTION</strong><span>Sélectionne Changement de direction.</span></div>
+              <div class="horus-help-key-item"><strong>CHGT DIRECTION</strong><span>Variante longue de DIR.</span></div>
+            </div>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#ff9800">
+            <h4>Commande en cours de phrase</h4>
+            <p><span class="horus-help-key">IMMATRICULATION :</span> annonce qu’une plaque va être dictée. HORUS interprète les lettres phonétiques et normalise une plaque reconnue, par exemple <b>« Papa Mike 628 November Victor » → PM-628-NV</b>.</p>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#ef5350">
+            <h4>Validation vocale</h4>
+            <p>Terminez la phrase par <span class="horus-help-key">VALIDER</span>, <span class="horus-help-key">VALIDÉ</span> ou <span class="horus-help-key">VALIDE</span> pour déclencher la même action que le bouton <b>OK</b>. Le mot de commande n’est pas conservé dans le commentaire.</p>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#42a5f5">
+            <h4>Alphabet phonétique reconnu</h4>
+            <div class="horus-help-alpha">
+              <div><b>A</b> ALPHA / ALFA</div>
+              <div><b>B</b> BRAVO</div>
+              <div><b>C</b> CHARLIE / CHARLY / CHARLIES</div>
+              <div><b>D</b> DELTA</div>
+              <div><b>E</b> ECHO / ÉCHO / ECHOS</div>
+              <div><b>F</b> FOXTROT / FOX-TROT</div>
+              <div><b>G</b> GOLF</div>
+              <div><b>H</b> HOTEL / HÔTEL</div>
+              <div><b>I</b> INDIA</div>
+              <div><b>J</b> JULIETT / JULIET / JULIETTE</div>
+              <div><b>K</b> KILO / KILOS / KG</div>
+              <div><b>L</b> LIMA</div>
+              <div><b>M</b> MIKE</div>
+              <div><b>N</b> NOVEMBER</div>
+              <div><b>O</b> OSCAR</div>
+              <div><b>P</b> PAPA</div>
+              <div><b>Q</b> QUEBEC</div>
+              <div><b>R</b> ROMEO / ROMÉO / ROME</div>
+              <div><b>S</b> SIERRA / SIRRA</div>
+              <div><b>T</b> TANGO</div>
+              <div><b>U</b> UNIFORM / UNIFORME</div>
+              <div><b>V</b> VICTOR / VICTORE</div>
+              <div><b>W</b> WHISKEY / WHISKY</div>
+              <div><b>X</b> X-RAY / XR / XRAY</div>
+              <div><b>Y</b> YANKEE / YANKEES / YANKIE / YANKI</div>
+              <div><b>Z</b> ZULU / ZOULOU</div>
+            </div>
+          </div>
+
+          <div class="horus-help-section" style="--help-accent:#b027f5">
+            <h4>Conseil opérationnel</h4>
+            <p>Les mots-clés de type sont recherchés au <b>début</b> de la dictée. <b>IMMATRICULATION</b> intervient au moment où la plaque est énoncée et <b>VALIDER</b> termine l’événement.</p>
+          </div>
+        </div>
+
+        <div class="horus-help-foot">
+          <button type="button" class="horus-help-action primary" onclick="toggleHorusHelpFace(false)">↻ Guide général</button>
+          <button type="button" class="horus-help-action" onclick="closeHorusHelp()">Fermer</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script id="horusMobileHelpScript">
+(function(){
+    function helpModal(){ return document.getElementById('horusHelpModal'); }
+    function helpCard(){ return document.getElementById('horusHelpCard'); }
+
+    window.openHorusHelp = function(){
+        const modal = helpModal();
+        const card = helpCard();
+        if(!modal || !card) return;
+        card.classList.remove('flipped');
+        modal.classList.add('open');
+        document.body.dataset.horusHelpOpen = '1';
+    };
+
+    window.closeHorusHelp = function(){
+        const modal = helpModal();
+        const card = helpCard();
+        if(!modal || !card) return;
+        modal.classList.remove('open');
+        card.classList.remove('flipped');
+        delete document.body.dataset.horusHelpOpen;
+    };
+
+    window.toggleHorusHelpFace = function(showVoice){
+        const card = helpCard();
+        if(!card) return;
+        card.classList.toggle('flipped', Boolean(showVoice));
+    };
+
+    function bind(){
+        const modal = helpModal();
+        if(!modal || modal.dataset.bound === '1') return;
+        modal.dataset.bound = '1';
+        modal.addEventListener('click', function(event){
+            if(event.target === modal) window.closeHorusHelp();
+        });
+    }
+
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', bind, {once:true});
+    }else{
+        bind();
+    }
+
+    document.addEventListener('keydown', function(event){
+        if(event.key === 'Escape' && helpModal()?.classList.contains('open')){
+            window.closeHorusHelp();
+        }
+    });
+})();
+</script>
 
 <div id="horusDiagnosticModal" class="horus-diagnostic-overlay" role="dialog" aria-modal="true" aria-labelledby="horusDiagnosticTitle">
   <div class="horus-diagnostic-dialog">
