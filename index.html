@@ -1327,6 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div id="archiveStatus" class="archive-status">Aucun média en attente d’export.</div>
+        <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
             <div class="type-btn" data-type="STOP">STOP</div>
@@ -1513,6 +1514,49 @@ document.addEventListener('DOMContentLoaded', () => {
         const HORUS_SURVEILLANCE_FORMAT = 'HORUS_SURVEILLANCE';
         const HORUS_SURVEILLANCE_FORMAT_VERSION = 1;
         const HORUS_SURVEILLANCE_SCHEMA_VERSION = 4;
+
+        const HORUS_SERVER_URL = 'http://192.168.1.109:8000';
+            async function testHorusServerConnection() {
+                try {
+                    const response = await fetch(`${HORUS_SERVER_URL}/api/health`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        return false;
+                    }
+
+                    const data = await response.json();
+                    console.log('HORUS Server :', data);
+
+                    return true;
+
+                } catch (error) {
+                console.error('Serveur HORUS inaccessible :', error);
+                return false;
+                }
+            }        
+
+            async function updateHorusServerStatus() {
+                const statusElement = document.getElementById('serverStatus');
+
+                if (!statusElement) {
+                    return;
+                }
+
+                statusElement.textContent = 'Serveur HORUS : vérification...';
+
+                const isAvailable = await testHorusServerConnection();
+
+                if (isAvailable) {
+                    statusElement.textContent = 'Serveur HORUS : accessible';
+                } else {
+                    statusElement.textContent = 'Serveur HORUS : indisponible';
+                }
+            }
 
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
@@ -3353,6 +3397,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const clockEl = document.getElementById('clock');
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHorusServerStatus();
+        });
     </script>
 
 
