@@ -1328,6 +1328,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div id="archiveStatus" class="archive-status">Aucun média en attente d’export.</div>
         <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
+        <button
+            type="button"
+            onclick="syncHorusSession(1)"
+            style="margin-top:8px;padding:8px 12px;"
+        >
+            TEST SYNCHRO HORUS
+        </button>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
             <div class="type-btn" data-type="STOP">STOP</div>
