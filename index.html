@@ -3431,11 +3431,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
         
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             updateHorusServerStatus();
-
-            const result = await syncHorusSession(1);
-            console.log('TEST SYNC HORUS :', result);
         });
     </script>
 
