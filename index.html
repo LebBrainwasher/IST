@@ -1558,6 +1558,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            async function syncHorusSession(operationId) {
+                try {
+                    const sessionData = buildSessionData(false);
+
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/sync?operation_id=${operationId}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(sessionData)
+                        }
+                        );
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('Synchronisation HORUS refusée :', response.status, errorText);
+                            return false;
+                        }
+
+                        const result = await response.json();
+                        console.log('Synchronisation HORUS réussie :', result);
+
+                        return result;
+
+                        } catch (error) {
+                        console.error('Erreur de synchronisation HORUS :', error);
+                        return false;
+                }
+            }
+
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
         function isValidHorusId(value, prefix) {
@@ -3398,8 +3431,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
         
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             updateHorusServerStatus();
+
+            const result = await syncHorusSession(1);
+            console.log('TEST SYNC HORUS :', result);
         });
     </script>
 
