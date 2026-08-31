@@ -1342,6 +1342,13 @@ document.addEventListener('DOMContentLoaded', () => {
         >
           TEST RÉCEPTION SERVEUR
         </button>
+        <button
+          type="button"
+          onclick="testInsertOneServerEvent()"
+          style="margin-top:8px;padding:8px 12px;"
+        >
+          TEST INSERTION SERVEUR
+        </button>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
             <div class="type-btn" data-type="STOP">STOP</div>
@@ -1786,6 +1793,78 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
               }
             }
+
+            function hasHorusEvent(eventId) {
+                if (!eventId) return false;
+
+                return Array.from(document.querySelectorAll('tbody tr')).some(
+                    row => row.dataset.eventId === String(eventId)
+                );
+            }
+
+            function serverEventToHorusEntry(event) {
+                const date = new Date(event.date_evenement);
+
+                const heure = Number.isNaN(date.getTime())
+                    ? ''
+                    : date.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                const geolocation =
+                    event.latitude != null && event.longitude != null
+                        ? {
+                            latitude: event.latitude,
+                            longitude: event.longitude,
+                            accuracy: event.gps_accuracy ?? null,
+                            altitude: event.gps_altitude ?? null,
+                            altitudeAccuracy: event.gps_altitude_accuracy ?? null,
+                            heading: event.gps_heading ?? null,
+                            speed: event.gps_speed ?? null,
+                            capturedAt: event.gps_captured_at ?? null,
+                            source: event.gps_source ?? null
+                        }
+                        : null;
+
+                return {
+                    eventId: event.event_id,
+                    heure: heure,
+                    type: event.type_evenement,
+                    contact: event.contact ? '👥' : '',
+                    desc: event.description || '',
+                    geolocation: geolocation,
+                    media: []
+                };
+            }
+
+            async function testInsertOneServerEvent() {
+                const events = await fetchHorusOperationEvents(1);
+
+                const eventToInsert = [...events].reverse().find(event =>
+                    event.event_id &&
+                    String(event.event_id).startsWith('EVT-') &&
+                    !hasHorusEvent(event.event_id)
+                );
+
+                if (!eventToInsert) {
+                    const serverStatus = document.getElementById('serverStatus');
+                    if (serverStatus) {
+                        serverStatus.textContent =
+                            'Serveur HORUS : aucun nouvel événement à insérer';
+                    }
+                    return;
+                }
+
+                addEntry(serverEventToHorusEntry(eventToInsert));
+
+                const serverStatus = document.getElementById('serverStatus');
+                if (serverStatus) {
+                    serverStatus.textContent =
+                        `Serveur HORUS : événement ${eventToInsert.event_id} reçu`;
+                }
+            }            
 
             async function fetchHorusOperationEvents(operationId = 1) {
                 try {
