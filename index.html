@@ -1598,7 +1598,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            async function uploadHorusMediaFile(mediaId, file) {
+            async function uploadHorusMediaFile(mediaId, file, originalFileName = null, originalFileType = null) {
                 try {
                     if (!file) {
                         console.error('Fichier média HORUS absent :', mediaId);
@@ -1620,15 +1620,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         uploadFile = new Blob(
                             [buffer],
                             {
-                              type: file.type || 'application/octet-stream'
+                              type: originalFileType || file.type || 'application/octet-stream'
                             }
                         );
                 }
 
                 const fileName =
-                  file.name ||
-                  file.fileName ||
-                  `${mediaId}.bin`;
+                    originalFileName ||
+                    file.name ||
+                    file.fileName ||
+                    `${mediaId}.bin`;
 
                 const formData = new FormData();
 
@@ -1688,7 +1689,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     for (const item of mediaList) {
                         if (item && item.id === mediaId && item._file) {
-                            return await uploadHorusMediaFile(mediaId, item._file);
+                            return await uploadHorusMediaFile(
+                                mediaId,
+                                item._file,
+                                item.fileName || null,
+                                item.fileType || null
+                            );
                         }
                     }
                 }
