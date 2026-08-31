@@ -2686,6 +2686,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetPendingMedia();
                 updateArchiveStatus();
 
+                syncCurrentHorusSession();
+
                 // Après chaque nouvelle ligne validée (Entrée ou commande vocale VALIDER),
                 // revenir automatiquement sur OBSERVATION, type le plus fréquemment utilisé.
                 // Une commande vocale START / STOP / CONTACT / DIRECTION au début de la
