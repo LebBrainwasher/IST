@@ -1799,6 +1799,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const events = await response.json();
+                    
+                    const serverStatus = document.getElementById('serverStatus');
+                    if (serverStatus) {
+                        serverStatus.textContent =
+                            `Serveur HORUS : ${Array.isArray(events) ? events.length : 0} événements reçus`;
+                    }
 
                     console.log(
                         'HORUS - événements reçus du serveur :',
