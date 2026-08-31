@@ -1598,6 +1598,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            async function uploadHorusMediaFile(mediaId, file) {
+                try {
+                    const formData = new FormData();
+                        formData.append('file', file);
+
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/media/${encodeURIComponent(mediaId)}/file`,
+                        {
+                            method: 'POST',
+                            body: formData
+                        }
+                        );
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                        console.error(
+                            'Envoi média HORUS refusé :',
+                            mediaId,
+                            response.status,
+                            errorText
+                        );
+                        return false;
+                        }
+
+                    const result = await response.json();
+                        console.log('Média HORUS envoyé :', mediaId, result);
+
+                        return result;
+
+                        } catch (error) {
+                        console.error('Erreur envoi média HORUS :', mediaId, error);
+                        return false;
+                }
+            }
+
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
         function isValidHorusId(value, prefix) {
