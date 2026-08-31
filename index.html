@@ -1330,10 +1330,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
         <button
             type="button"
-            onclick="syncHorusSession(1)"
+            onclick="uploadHorusMediaById('MED-1788162255084-2HHQE')"
             style="margin-top:8px;padding:8px 12px;"
         >
-            TEST SYNCHRO HORUS
+            TEST ENVOI PHOTO HORUS
         </button>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
@@ -1631,6 +1631,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('Erreur envoi média HORUS :', mediaId, error);
                         return false;
                 }
+            }
+
+            async function uploadHorusMediaById(mediaId) {
+                const rows = Array.from(document.querySelectorAll('tbody tr'));
+
+                for (const row of rows) {
+                    const mediaList = Array.isArray(row._media) ? row._media : [];
+
+                    for (const item of mediaList) {
+                        if (item && item.id === mediaId && item._file) {
+                            return await uploadHorusMediaFile(mediaId, item._file);
+                        }
+                    }
+                }
+
+                console.error('Média HORUS introuvable ou fichier absent :', mediaId);
+                return false;
             }
 
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
