@@ -1326,23 +1326,50 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" id="mediaButton" class="media-btn" onclick="capturePhoto()">📷 Photo</button>
         </div>
 
-        <div id="surveillanceControls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <div
+            id="surveillanceControls"
+            style="display:flex;gap:8px;margin-top:10px;width:100%;"
+        >
             <button
                 type="button"
                 id="createSurveillanceBtn"
                 onclick="createHorusSurveillance()"
-                style="flex:1;min-width:180px;padding:10px 12px;"
+                style="
+                    flex:1;
+                    min-width:0;
+                    min-height:46px;
+                    padding:8px 6px;
+                    border:1px solid #3f6472;
+                    border-radius:10px;
+                    background:#26343b;
+                    color:#eeeeee;
+                    font-weight:700;
+                    font-size:0.82rem;
+                    white-space:nowrap;
+                "
             >
-                ➕ CRÉER UNE SURVEILLANCE
+                ➕ CRÉER
             </button>
 
             <button
                 type="button"
                 id="joinSurveillanceBtn"
                 onclick="openJoinSurveillanceDialog()"
-                style="flex:1;min-width:180px;padding:10px 12px;"
+                style="
+                    flex:1;
+                    min-width:0;
+                    min-height:46px;
+                    padding:8px 6px;
+                    border:1px solid #3f6472;
+                    border-radius:10px;
+                    background:#26343b;
+                    color:#eeeeee;
+                    font-weight:700;
+                    font-size:0.82rem;
+                    white-space:nowrap;
+                "
             >
-                🔗 REJOINDRE UNE SURVEILLANCE
+                🔗 REJOINDRE
             </button>
         </div>
 
