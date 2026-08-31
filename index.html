@@ -1577,6 +1577,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let sessionId = createHorusId('SES');
 
+        let surveillanceId = null;
+        let surveillanceJoinCode = null;
+        let surveillanceActionInProgress = false;
+
         const HORUS_APP_NAME = 'HORUS Mobile';
         const HORUS_APP_VERSION = '1.0.2';
         const HORUS_APP_AUTHOR = '@HBB';
@@ -1774,6 +1778,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             async function createHorusSurveillance() {
+                    if (surveillanceActionInProgress) {
+                        return;
+                    }
+
                 const operatorLabel = operatorInput.value.trim();
                 const pvLabel = pvInput.value.trim();
 
@@ -1781,6 +1789,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert("Renseignez d'abord l'identifiant opérateur et la référence PV.");
                     return;
                 }
+
+                surveillanceActionInProgress = true;
 
                 const pvKey = normalizePvReference(pvLabel);
 
@@ -1809,8 +1819,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const data = await response.json();
 
+                    surveillanceId = data.surveillance_id || null;
+                    surveillanceJoinCode = data.join_code || null;
+
+                    const joinResponse = await fetch(
+                        `${HORUS_SERVER_URL}/api/operations/1/surveillances/join/${encodeURIComponent(surveillanceJoinCode)}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                session_id: sessionId,
+                                date_raw: sessionDateISO,
+                                operator_label: operatorLabel,
+                                application: HORUS_APP_NAME,
+                                application_version: HORUS_APP_VERSION
+                            })
+                        }
+                    );
+
+                    if (!joinResponse.ok) {
+                        throw new Error(
+                            `Rattachement de la session créatrice impossible : HTTP ${joinResponse.status}`
+                        );
+                    }
+
                     status.textContent =
-                        `Surveillance HORUS : ${data.join_code} — active`;
+                        `Surveillance HORUS : ${surveillanceJoinCode || "code indisponible"} — active`;
 
                     console.log("Surveillance HORUS créée :", data);
 
@@ -1818,6 +1854,102 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Création surveillance HORUS impossible :", error);
                     status.textContent =
                         "Surveillance HORUS : erreur de création.";
+                } finally {
+                    surveillanceActionInProgress = false;
+                }
+            }
+
+            function openJoinSurveillanceDialog() {
+                const code = prompt(
+                    "Saisissez le code de rattachement de la surveillance HORUS :"
+                );
+
+                if (code === null) {
+                    return;
+                }
+
+                const normalizedCode = code.trim().toUpperCase();
+
+                if (!normalizedCode) {
+                    return;
+                }
+
+                joinHorusSurveillance(normalizedCode);
+            }
+
+
+            async function joinHorusSurveillance(joinCode) {
+                const operatorLabel = operatorInput.value.trim();
+
+                if (!operatorLabel) {
+                    alert("Renseignez d'abord l'identifiant opérateur.");
+                    return;
+                }
+
+                const status = document.getElementById("surveillanceStatus");
+                status.textContent = "Surveillance HORUS : rattachement en cours...";
+
+                try {
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/operations/1/surveillances/join/${encodeURIComponent(joinCode)}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                session_id: sessionId,
+                                date_raw: sessionDateISO,
+                                operator_label: operatorLabel,
+                                application: HORUS_APP_NAME,
+                                application_version: HORUS_APP_VERSION
+                            })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        let detail = "";
+
+                        try {
+                            const errorData = await response.json();
+                            detail = errorData.detail || "";
+                        } catch (_) {
+                            // Réponse serveur non JSON.
+                        }
+
+                        throw new Error(
+                            detail || `Erreur serveur HTTP ${response.status}`
+                        );
+                    }
+
+                    const data = await response.json();
+
+                    surveillanceId = data.surveillance_id || null;
+                    surveillanceJoinCode = data.join_code || null;
+                    
+                    
+                    // Le PV est imposé par la surveillance rejointe.
+                    if (data.pv_label) {
+                        pvInput.value = data.pv_label;
+                    }
+
+                    status.textContent =
+                        `Surveillance HORUS : ${surveillanceJoinCode || "code indisponible"} — active`;
+
+                    console.log("Surveillance HORUS rejointe :", data);
+
+                } catch (error) {
+                    console.error(
+                        "Rattachement surveillance HORUS impossible :",
+                        error
+                    );
+
+                    status.textContent =
+                        "Surveillance HORUS : rattachement impossible.";
+
+                    alert(
+                        `Impossible de rejoindre la surveillance.\n\n${error.message}`
+                    );
                 }
             }
 
