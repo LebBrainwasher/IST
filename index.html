@@ -1600,37 +1600,84 @@ document.addEventListener('DOMContentLoaded', () => {
 
             async function uploadHorusMediaFile(mediaId, file) {
                 try {
-                    const formData = new FormData();
-                        formData.append('file', file);
+                    if (!file) {
+                        console.error('Fichier média HORUS absent :', mediaId);
+                        return false;
+                    }
 
-                    const response = await fetch(
-                        `${HORUS_SERVER_URL}/api/media/${encodeURIComponent(mediaId)}/file`,
-                        {
-                            method: 'POST',
-                            body: formData
+                    let uploadFile = file;
+
+                    // Garantit qu'un vrai contenu binaire est envoyé à FastAPI,
+                    // notamment après réimport d'une archive HORUS.
+                    if (!(uploadFile instanceof Blob)) {
+                        if (typeof uploadFile.arrayBuffer !== 'function') {
+                            console.error('Média HORUS non convertible en fichier :', mediaId, uploadFile);
+                            return false;
                         }
+
+                        const buffer = await uploadFile.arrayBuffer();
+
+                        uploadFile = new Blob(
+                            [buffer],
+                            {
+                              type: file.type || 'application/octet-stream'
+                            }
                         );
+                }
+
+                const fileName =
+                  file.name ||
+                  file.fileName ||
+                  `${mediaId}.bin`;
+
+                const formData = new FormData();
+
+                formData.append(
+                  'file',
+                  uploadFile,
+                  fileName
+                );
+
+                const response = await fetch(
+                  `${HORUS_SERVER_URL}/api/media/${encodeURIComponent(mediaId)}/file`,
+                  {
+                    method: 'POST',
+                    body: formData
+                  }
+                );
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                        console.error(
-                            'Envoi média HORUS refusé :',
-                            mediaId,
-                            response.status,
-                            errorText
-                        );
-                        return false;
-                        }
+                  const errorText = await response.text();
 
-                    const result = await response.json();
-                        console.log('Média HORUS envoyé :', mediaId, result);
+                  console.error(
+                    'Envoi média HORUS refusé :',
+                    mediaId,
+                    response.status,
+                    errorText
+                  );
 
-                        return result;
-
-                        } catch (error) {
-                        console.error('Erreur envoi média HORUS :', mediaId, error);
-                        return false;
+                  return false;
                 }
+
+                const result = await response.json();
+
+                console.log(
+                  'Média HORUS envoyé :',
+                  mediaId,
+                  result
+                );
+
+                return result;
+
+              } catch (error) {
+                console.error(
+                  'Erreur envoi média HORUS :',
+                  mediaId,
+                  error
+                );
+
+                return false;
+              }
             }
 
             async function uploadHorusMediaById(mediaId) {
