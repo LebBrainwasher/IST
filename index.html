@@ -1330,10 +1330,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
         <button
           type="button"
-          onclick="uploadHorusMediaById('MED-1788184059553-ZXK4P')"
+          onclick="syncCurrentHorusSession()"
           style="margin-top:8px;padding:8px 12px;"
         >
-          TEST ENVOI NOUVELLE PHOTO
+          TEST SYNCHRO COMPLÈTE
         </button>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
@@ -1702,6 +1702,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Média HORUS introuvable ou fichier absent :', mediaId);
                 return false;
             }
+
+            async function syncCurrentHorusSession() {
+                const operationId = 1;
+
+                try {
+                    const statusElement = document.getElementById('serverStatus');
+
+                if (statusElement) {
+                  statusElement.textContent = 'Serveur HORUS : synchronisation...';
+                }
+
+                // 1. Synchronisation de la session, des événements
+                //    et des métadonnées des médias.
+                await syncHorusSession(operationId);
+
+                // 2. Demande au serveur quels médias sont encore manquants.
+                const sessionData = buildSessionData(false);
+                const currentSessionId = sessionData.sessionId;
+
+                const statusResponse = await fetch(
+                  `${HORUS_SERVER_URL}/api/operations/${operationId}/sessions/${encodeURIComponent(currentSessionId)}/media/status`
+                );
+
+                if (!statusResponse.ok) {
+                  throw new Error(`Statut médias impossible : HTTP ${statusResponse.status}`);
+                }
+
+                const mediaStatus = await statusResponse.json();
+                const missingMediaIds = Array.isArray(mediaStatus.missing_media_ids)
+                  ? mediaStatus.missing_media_ids
+                  : [];
+
+                // 3. Envoi uniquement des fichiers que le serveur ne possède pas.
+                for (const mediaId of missingMediaIds) {
+                  await uploadHorusMediaById(mediaId);
+                }
+
+                // 4. Vérification finale.
+                const finalResponse = await fetch(
+                  `${HORUS_SERVER_URL}/api/operations/${operationId}/sessions/${encodeURIComponent(currentSessionId)}/media/status`
+                );
+
+                if (!finalResponse.ok) {
+                  throw new Error(`Vérification finale impossible : HTTP ${finalResponse.status}`);
+                }
+
+                const finalStatus = await finalResponse.json();
+
+                if (finalStatus.sync_complete) {
+                  if (statusElement) {
+                    statusElement.textContent = 'Serveur HORUS : synchronisé';
+                  }
+
+                  console.log('Synchronisation HORUS complète.', finalStatus);
+                  return true;
+                }
+
+                if (statusElement) {
+                  statusElement.textContent =
+                    `Serveur HORUS : ${finalStatus.media_missing} média(s) en attente`;
+                }
+
+                console.warn('Synchronisation HORUS incomplète.', finalStatus);
+                return false;
+
+              } catch (error) {
+                console.error('Erreur de synchronisation HORUS :', error);
+
+                const statusElement = document.getElementById('serverStatus');
+
+                if (statusElement) {
+                  statusElement.textContent = 'Serveur HORUS : erreur de synchronisation';
+                }
+
+                return false;
+              }
+            }
+
 
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
