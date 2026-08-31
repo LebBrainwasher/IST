@@ -1333,7 +1333,14 @@ document.addEventListener('DOMContentLoaded', () => {
           onclick="syncCurrentHorusSession()"
           style="margin-top:8px;padding:8px 12px;"
         >
-          TEST SYNCHRO COMPLETE
+          TEST SYNCHRO COMPLÈTE
+        </button>
+        <button
+          type="button"
+          onclick="fetchHorusOperationEvents()"
+          style="margin-top:8px;padding:8px 12px;"
+        >
+          TEST RÉCEPTION SERVEUR
         </button>
         <div class="type-switcher" id="typeSwitcher">
             <div class="type-btn" data-type="START">START</div>
@@ -1780,6 +1787,36 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
 
+            async function fetchHorusOperationEvents(operationId = 1) {
+                try {
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/operations/${operationId}/events`,
+                        { cache: 'no-store' }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`Lecture événements impossible : HTTP ${response.status}`);
+                    }
+
+                    const events = await response.json();
+
+                    console.log(
+                        'HORUS - événements reçus du serveur :',
+                        Array.isArray(events) ? events.length : 0,
+                        events
+                    );
+
+                    return Array.isArray(events) ? events : [];
+
+                } catch (error) {
+                    console.error(
+                        'HORUS - erreur de récupération des événements :',
+                        error
+                    );
+
+                    return [];
+                }
+            }
 
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
