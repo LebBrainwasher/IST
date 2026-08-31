@@ -1325,6 +1325,35 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" id="gpsButton" class="gps-btn" onclick="capturePosition()">📍 Position</button>
             <button type="button" id="mediaButton" class="media-btn" onclick="capturePhoto()">📷 Photo</button>
         </div>
+
+        <div id="surveillanceControls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+            <button
+                type="button"
+                id="createSurveillanceBtn"
+                onclick="createHorusSurveillance()"
+                style="flex:1;min-width:180px;padding:10px 12px;"
+            >
+                ➕ CRÉER UNE SURVEILLANCE
+            </button>
+
+            <button
+                type="button"
+                id="joinSurveillanceBtn"
+                onclick="openJoinSurveillanceDialog()"
+                style="flex:1;min-width:180px;padding:10px 12px;"
+            >
+                🔗 REJOINDRE UNE SURVEILLANCE
+            </button>
+        </div>
+
+        <div
+            id="surveillanceStatus"
+            class="archive-status"
+            style="margin-top:8px;"
+        >
+            Surveillance HORUS : aucune surveillance active.
+        </div>
+
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div id="archiveStatus" class="archive-status">Aucun média en attente d’export.</div>
         <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
@@ -1715,6 +1744,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 console.error('Média HORUS introuvable ou fichier absent :', mediaId);
                 return false;
+            }
+
+            async function createHorusSurveillance() {
+                const operatorLabel = operatorInput.value.trim();
+                const pvLabel = pvInput.value.trim();
+
+                if (!operatorLabel || !pvLabel) {
+                    alert("Renseignez d'abord l'identifiant opérateur et la référence PV.");
+                    return;
+                }
+
+                const pvKey = normalizePvReference(pvLabel);
+
+                const status = document.getElementById("surveillanceStatus");
+                status.textContent = "Surveillance HORUS : création en cours...";
+
+                try {
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/operations/1/surveillances`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                pv_label: pvLabel,
+                                pv_key: pvKey,
+                                created_by: operatorLabel
+                            })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    status.textContent =
+                        `Surveillance HORUS : ${data.join_code} — active`;
+
+                    console.log("Surveillance HORUS créée :", data);
+
+                } catch (error) {
+                    console.error("Création surveillance HORUS impossible :", error);
+                    status.textContent =
+                        "Surveillance HORUS : erreur de création.";
+                }
             }
 
             async function syncCurrentHorusSession() {
@@ -2807,8 +2884,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetPendingGps(row._geolocation ? 'Point GPS enregistré avec la ligne. Appuyez sur « Position » pour le prochain point.' : 'Aucune position associée à la prochaine entrée.');
                 resetPendingMedia();
                 updateArchiveStatus();
-
-                syncCurrentHorusSession();
 
                 // Après chaque nouvelle ligne validée (Entrée ou commande vocale VALIDER),
                 // revenir automatiquement sur OBSERVATION, type le plus fréquemment utilisé.
