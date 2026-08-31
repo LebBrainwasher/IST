@@ -1580,6 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let surveillanceId = null;
         let surveillanceJoinCode = null;
         let surveillanceActionInProgress = false;
+        let surveillanceReceptionInProgress = false;
 
         const HORUS_APP_NAME = 'HORUS Mobile';
         const HORUS_APP_VERSION = '1.0.2';
@@ -2157,6 +2158,64 @@ document.addEventListener('DOMContentLoaded', () => {
                     return [];
                 }
             }
+
+            async function syncActiveSurveillanceEvents() {
+
+                if (!surveillanceId || surveillanceReceptionInProgress) {
+                    return;
+                }
+
+                surveillanceReceptionInProgress = true;
+
+                try {
+                    const events = await fetchHorusOperationEvents(1);
+
+                    if (!Array.isArray(events) || events.length === 0) {
+                        return;
+                    }
+
+                    const newEvents = events.filter(event =>
+                        event &&
+                        event.event_id &&
+                        String(event.event_id).startsWith('EVT-') &&
+                        !hasHorusEvent(event.event_id)
+                    );
+
+                    for (const event of newEvents) {
+                        addEntry(
+                            serverEventToHorusEntry(event)
+                        );
+                    }
+
+                    if (newEvents.length > 0) {
+                        const serverStatus =
+                            document.getElementById('serverStatus');
+
+                        if (serverStatus) {
+                            serverStatus.textContent =
+                                `Serveur HORUS : ${newEvents.length} nouvel événement reçu`;
+                        }
+
+                        console.log(
+                            'HORUS - nouveaux événements insérés automatiquement :',
+                            newEvents.length
+                        );
+                    }
+
+                } catch (error) {
+                    console.error(
+                        'HORUS - réception automatique impossible :',
+                        error
+                    );
+
+                } finally {
+                    surveillanceReceptionInProgress = false;
+                }
+            }
+
+        const surveillanceReceptionTimer = setInterval(() => {
+            syncActiveSurveillanceEvents();
+        }, 3000);    
 
         const HORUS_EVENT_TYPES = new Set(['START','STOP','Observation','Contact','Chgt Direction']);
 
