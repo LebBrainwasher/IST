@@ -1582,6 +1582,177 @@ document.addEventListener('DOMContentLoaded', () => {
         let surveillanceActionInProgress = false;
         let surveillanceReceptionInProgress = false;
 
+        const HORUS_ACTIVE_SURVEILLANCE_KEY = 'horus_active_surveillance_v1';
+
+        function saveActiveHorusSurveillance() {
+            if (!surveillanceId || !surveillanceJoinCode) {
+                return;
+            }
+
+            const activeSurveillance = {
+                surveillanceId: surveillanceId,
+                joinCode: surveillanceJoinCode,
+                operationId: 1,
+                operatorLabel: operatorInput.value.trim(),
+                pvLabel: pvInput.value.trim(),
+                savedAt: new Date().toISOString()
+            };
+
+            try {
+                localStorage.setItem(
+                    HORUS_ACTIVE_SURVEILLANCE_KEY,
+                    JSON.stringify(activeSurveillance)
+                );
+            } catch (error) {
+                console.error(
+                    'HORUS - impossible de mémoriser la surveillance active :',
+                    error
+                );
+            }
+        }
+
+        function clearActiveHorusSurveillance() {
+            try {
+                localStorage.removeItem(HORUS_ACTIVE_SURVEILLANCE_KEY);
+            } catch (error) {
+                console.error(
+                    'HORUS - impossible d’effacer la surveillance mémorisée :',
+                    error
+                );
+            }
+        }
+
+        function loadActiveHorusSurveillance() {
+            try {
+                const raw = localStorage.getItem(
+                    HORUS_ACTIVE_SURVEILLANCE_KEY
+                );
+
+                if (!raw) {
+                    return null;
+                }
+
+                const saved = JSON.parse(raw);
+
+                if (
+                    !saved ||
+                    !saved.surveillanceId ||
+                    !saved.joinCode
+                ) {
+                    clearActiveHorusSurveillance();
+                    return null;
+                }
+
+                return saved;
+
+            } catch (error) {
+                console.error(
+                    'HORUS - impossible de relire la surveillance mémorisée :',
+                    error
+                );
+
+                clearActiveHorusSurveillance();
+                return null;
+            }
+        }
+
+        async function restoreActiveHorusSurveillance() {
+            const saved = loadActiveHorusSurveillance();
+
+            if (!saved) {
+                return;
+            }
+
+            const status = document.getElementById('surveillanceStatus');
+
+            if (status) {
+                status.textContent =
+                    'Surveillance HORUS : restauration en cours...';
+            }
+
+            try {
+                const response = await fetch(
+                    `${HORUS_SERVER_URL}/api/operations/1/surveillances/join/${encodeURIComponent(saved.joinCode)}`,
+                    {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }
+                );
+
+                if (!response.ok) {
+                    clearActiveHorusSurveillance();
+
+                    if (status) {
+                        status.textContent =
+                            'Surveillance HORUS : aucune surveillance active.';
+                    }
+
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Sécurité : le code mémorisé doit toujours désigner
+                // la même surveillance que celle enregistrée localement.
+                if (
+                    !data.surveillance_id ||
+                    data.surveillance_id !== saved.surveillanceId
+                ) {
+                    clearActiveHorusSurveillance();
+
+                    if (status) {
+                        status.textContent =
+                            'Surveillance HORUS : surveillance mémorisée invalide.';
+                    }
+
+                    return;
+                }
+
+               // Si le serveur fournit explicitement un statut,
+                // seule une surveillance OPEN peut être restaurée.
+                if (
+                    data.status &&
+                    String(data.status).toUpperCase() !== 'OPEN'
+                ) {
+                    clearActiveHorusSurveillance();
+
+                    if (status) {
+                        status.textContent =
+                            'Surveillance HORUS : surveillance clôturée.';
+                    }
+
+                    return;
+                }
+
+                // Restauration des informations opérateur.
+                if (saved.operatorLabel) {
+                    operatorInput.value = saved.operatorLabel;
+                }
+
+                // Le PV du serveur est prioritaire.
+                if (data.pv_label) {
+                    pvInput.value = data.pv_label;
+                } else if (saved.pvLabel) {
+                    pvInput.value = saved.pvLabel;
+                }
+
+                // Le POST de rattachement recréera proprement
+                // la nouvelle session SES-* de cette page.
+                await joinHorusSurveillance(saved.joinCode);
+
+            } catch (error) {
+                console.error(
+                    'HORUS - restauration de la surveillance impossible :',
+                    error
+                );
+
+                if (status) {
+                    status.textContent =
+                        'Surveillance HORUS : restauration impossible.';
+                }
+            }
+        }
+
         const HORUS_APP_NAME = 'HORUS Mobile';
         const HORUS_APP_VERSION = '1.0.2';
         const HORUS_APP_AUTHOR = '@HBB';
@@ -1846,6 +2017,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                     }
 
+                    saveActiveHorusSurveillance();
+
                     status.textContent =
                         `Surveillance HORUS : ${surveillanceJoinCode || "code indisponible"} — active`;
 
@@ -1928,6 +2101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     surveillanceId = data.surveillance_id || null;
                     surveillanceJoinCode = data.join_code || null;
                     
+                    saveActiveHorusSurveillance();
                     
                     // Le PV est imposé par la surveillance rejointe.
                     if (data.pv_label) {
@@ -4062,8 +4236,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('fr-FR');
         }, 1000);
         
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             updateHorusServerStatus();
+            await restoreActiveHorusSurveillance();
         });
     </script>
 
