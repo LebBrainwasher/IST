@@ -2357,12 +2357,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const secondConfirmation = confirm(
-                    "CONFIRMATION FINALE\n\n" +
-                    "La surveillance va être clôturée définitivement.\n" +
-                    "Les autres opérateurs ne pourront plus la rejoindre.\n\n" +
-                    "Confirmer la FIN DE SURVEILLANCE ?"
-                );
+                const secondConfirmation = await showHorusSurveillanceModal({
+                    title: "CONFIRMATION FINALE",
+                    message:
+                        "La surveillance va être clôturée définitivement.\n\n" +
+                        "Les autres opérateurs ne pourront plus la rejoindre.\n\n" +
+                        "Confirmer la FIN DE SURVEILLANCE ?",
+                    confirmText: "TERMINER",
+                    cancelText: "ANNULER",
+                    showCancel: true
+                });
 
                 if (!secondConfirmation) {
                     return;
