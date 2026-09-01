@@ -2257,6 +2257,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     surveillanceId = null;
                     surveillanceJoinCode = null;
 
+                    updateSurveillanceControlsState();
+
                     if (status) {
                         status.textContent =
                             `Surveillance HORUS : clôturée`;
