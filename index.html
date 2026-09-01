@@ -2424,9 +2424,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     console.log("Surveillance HORUS clôturée :", data);
 
-                    alert(
-                        "La surveillance HORUS a été clôturée avec succès."
-                    );
+                    await showHorusSurveillanceModal({
+                        title: "SURVEILLANCE CLÔTURÉE",
+                        message:
+                            "La surveillance HORUS a été clôturée avec succès.\n\n" +
+                            "Vous pouvez maintenant créer une nouvelle surveillance ou en rejoindre une autre.",
+                        confirmText: "FERMER",
+                        showCancel: false
+                    });
 
                 } catch (error) {
                     console.error(
