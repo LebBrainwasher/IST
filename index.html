@@ -1709,6 +1709,30 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${prefix}-${Date.now().toString(36)}-${random}`;
         }
 
+        const HORUS_DEVICE_ID_KEY = 'horus_device_id_v1';
+
+        function getOrCreateHorusDeviceId() {
+            try {
+                let deviceId = localStorage.getItem(HORUS_DEVICE_ID_KEY);
+
+                if (!deviceId) {
+                    deviceId = createHorusId('DEV');
+                    localStorage.setItem(HORUS_DEVICE_ID_KEY, deviceId);
+                }
+
+                return deviceId;
+            } catch (error) {
+                console.error(
+                    "Impossible de lire ou mémoriser l'identifiant du terminal HORUS :",
+                    error
+                );
+
+                return createHorusId('DEV');
+            }
+        }
+
+        const horusDeviceId = getOrCreateHorusDeviceId();
+
         let sessionId = createHorusId('SES');
 
         let surveillanceId = null;
@@ -2162,7 +2186,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             body: JSON.stringify({
                                 pv_label: pvLabel,
                                 pv_key: pvKey,
-                                created_by: operatorLabel
+                                created_by: operatorLabel,
+                                creator_device_id: horusDeviceId
                             })
                         }
                     );
