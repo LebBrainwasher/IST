@@ -1402,6 +1402,79 @@ document.addEventListener('DOMContentLoaded', () => {
             Surveillance HORUS : aucune surveillance active.
         </div>
 
+        <!-- Modale HORUS - Confirmation de fin de surveillance -->
+        <div
+            id="horusSurveillanceModal"
+            style="
+                display:none;
+                position:fixed;
+                inset:0;
+                z-index:10000;
+                background:rgba(0,0,0,0.78);
+                align-items:center;
+                justify-content:center;
+                padding:20px;
+            "
+        >
+            <div
+                style="
+                    width:100%;
+                    max-width:430px;
+                    background:#1d1f20;
+                    border:1px solid #3f6472;
+                    border-radius:16px;
+                    box-shadow:0 12px 40px rgba(0,0,0,0.65);
+                    overflow:hidden;
+                "
+            >
+                <div
+                    style="
+                        padding:16px 18px;
+                        border-bottom:1px solid #34383a;
+                        color:#4caf50;
+                        font-weight:800;
+                        font-size:1rem;
+                        letter-spacing:0.04em;
+                    "
+                >
+                    HORUS — SURVEILLANCE TACTIQUE
+                </div>
+
+                <div style="padding:20px 18px;">
+                    <div
+                        id="horusSurveillanceModalTitle"
+                        style="
+                            color:#f0f2f4;
+                            font-size:1.15rem;
+                            font-weight:800;
+                            margin-bottom:12px;
+                        "
+                    >
+                        Fin de surveillance
+                    </div>
+
+                    <div
+                        id="horusSurveillanceModalMessage"
+                        style="
+                            color:#b8bec4;
+                            font-size:0.95rem;
+                            line-height:1.5;
+                            white-space:pre-line;
+                        "
+                    ></div>
+                </div>
+
+                <div
+                    id="horusSurveillanceModalActions"
+                    style="
+                        display:flex;
+                        gap:10px;
+                        padding:0 18px 18px;
+                    "
+                ></div>
+            </div>
+        </div>
+
         <div id="gpsStatus" class="gps-status">Aucune position associée à la prochaine entrée.</div>
         <div id="archiveStatus" class="archive-status">Aucun média en attente d’export.</div>
         <div id="serverStatus" class="archive-status">Serveur HORUS : vérification non effectuée.</div>
@@ -2181,6 +2254,82 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            function showHorusSurveillanceModal({
+                title,
+                message,
+                confirmText = "CONFIRMER",
+                cancelText = "ANNULER",
+                showCancel = true
+            }) {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById("horusSurveillanceModal");
+                    const titleEl = document.getElementById("horusSurveillanceModalTitle");
+                    const messageEl = document.getElementById("horusSurveillanceModalMessage");
+                    const actionsEl = document.getElementById("horusSurveillanceModalActions");
+
+                    if (!modal || !titleEl || !messageEl || !actionsEl) {
+                        console.error("HORUS : modale de surveillance introuvable.");
+                        resolve(false);
+                        return;
+                    }
+
+                    titleEl.textContent = title || "HORUS";
+                    messageEl.textContent = message || "";
+
+                    actionsEl.innerHTML = "";
+
+                    if (showCancel) {
+                        const cancelButton = document.createElement("button");
+
+                        cancelButton.type = "button";
+                        cancelButton.textContent = cancelText;
+
+                        cancelButton.style.cssText = `
+                            flex:1;
+                            padding:12px 10px;
+                            border:1px solid #3f6472;
+                            border-radius:10px;
+                            background:#26343b;
+                            color:#eef2f6;
+                            font-weight:700;
+                           font-size:0.9rem;
+                        `;
+
+                        cancelButton.onclick = () => {
+                            modal.style.display = "none";
+                            resolve(false);
+                        };
+
+                        actionsEl.appendChild(cancelButton);
+                    }
+
+                    const confirmButton = document.createElement("button");
+
+                    confirmButton.type = "button";
+                    confirmButton.textContent = confirmText;
+
+                    confirmButton.style.cssText = `
+                        flex:1;
+                        padding:12px 10px;
+                        border:1px solid #6f5a3f;
+                        border-radius:10px;
+                        background:#3f3428;
+                        color:#eef2f6;
+                        font-weight:800;
+                        font-size:0.9rem;
+                    `;
+
+                    confirmButton.onclick = () => {
+                        modal.style.display = "none";
+                        resolve(true);
+                    };
+
+                    actionsEl.appendChild(confirmButton);
+
+                    modal.style.display = "flex";
+                });
+            }
+
             async function endHorusSurveillance() {
                 if (!surveillanceId) {
                     alert("Aucune surveillance HORUS active à clôturer.");
@@ -2194,10 +2343,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const firstConfirmation = confirm(
-                    "Voulez-vous vraiment mettre fin à cette surveillance HORUS ?\n\n" +
-                    "Cette action concerne tous les opérateurs rattachés à cette surveillance."
-                );
+                const firstConfirmation = await showHorusSurveillanceModal({
+                    title: "FIN DE SURVEILLANCE",
+                    message:
+                        "Voulez-vous vraiment mettre fin à cette surveillance HORUS ?\n\n" +
+                        "Cette action concerne tous les opérateurs rattachés à cette surveillance.",
+                    confirmText: "CONTINUER",
+                    cancelText: "ANNULER",
+                    showCancel: true
+                });
 
                 if (!firstConfirmation) {
                     return;
