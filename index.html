@@ -2285,6 +2285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 operator_label: operatorLabel,
                                 application: HORUS_APP_NAME,
                                 application_version: HORUS_APP_VERSION
+                                device_id: horusDeviceId
                             })
                         }
                     );
@@ -2305,6 +2306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const data = await response.json();
+                    surveillanceIsCreator = Boolean(data.is_creator);
 
                     surveillanceId = data.surveillance_id || null;
                     surveillanceJoinCode = data.join_code || null;
