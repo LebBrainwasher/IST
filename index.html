@@ -1371,6 +1371,26 @@ document.addEventListener('DOMContentLoaded', () => {
             >
                 🔗 REJOINDRE
             </button>
+
+            <button
+                type="button"
+                onclick="endHorusSurveillance()"
+                style="
+                    flex:1;
+                    min-width:0;
+                    min-height:46px;
+                    padding:8px 6px;
+                    border:1px solid #6f5a3f;
+                    border-radius:10px;
+                    background:#3f3428;
+                    color:#eef2f6;
+                    font-weight:700;
+                    font-size:0.82rem;
+                "
+            >
+                ⏹ TERMINER
+            </button>
+
         </div>
 
         <div
@@ -2124,6 +2144,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     alert(
                         `Impossible de rejoindre la surveillance.\n\n${error.message}`
+                    );
+                }
+            }
+
+            async function endHorusSurveillance() {
+                if (!surveillanceId) {
+                    alert("Aucune surveillance HORUS active à clôturer.");
+                    return;
+                }
+
+                const operatorLabel = operatorInput.value.trim();
+
+                if (!operatorLabel) {
+                    alert("L'identifiant opérateur est nécessaire pour clôturer la surveillance.");
+                    return;
+                }
+
+                const firstConfirmation = confirm(
+                    "Voulez-vous vraiment mettre fin à cette surveillance HORUS ?\n\n" +
+                    "Cette action concerne tous les opérateurs rattachés à cette surveillance."
+                );
+
+                if (!firstConfirmation) {
+                    return;
+                }
+
+                const secondConfirmation = confirm(
+                    "CONFIRMATION FINALE\n\n" +
+                    "La surveillance va être clôturée définitivement.\n" +
+                    "Les autres opérateurs ne pourront plus la rejoindre.\n\n" +
+                    "Confirmer la FIN DE SURVEILLANCE ?"
+                );
+
+                if (!secondConfirmation) {
+                    return;
+                }
+
+                const status = document.getElementById("surveillanceStatus");
+
+                if (status) {
+                    status.textContent =
+                        "Surveillance HORUS : clôture en cours...";
+                }
+
+                try {
+                    const response = await fetch(
+                        `${HORUS_SERVER_URL}/api/operations/1/surveillances/${encodeURIComponent(surveillanceId)}/end`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                ended_by: operatorLabel
+                            })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        let detail = "";
+
+                        try {
+                            const errorData = await response.json();
+                            detail = errorData.detail || "";
+                        } catch (_) {
+                            // Réponse serveur non JSON.
+                        }
+
+                        throw new Error(
+                            detail || `Erreur serveur HTTP ${response.status}`
+                        );
+                    }
+
+                    const data = await response.json();
+
+                    clearActiveHorusSurveillance();
+
+                    surveillanceId = null;
+                    surveillanceJoinCode = null;
+
+                    if (status) {
+                        status.textContent =
+                            `Surveillance HORUS : clôturée`;
+                    }
+
+                    console.log("Surveillance HORUS clôturée :", data);
+
+                    alert(
+                        "La surveillance HORUS a été clôturée avec succès."
+                    );
+
+                } catch (error) {
+                    console.error(
+                        "Clôture surveillance HORUS impossible :",
+                        error
+                    );
+
+                    if (status) {
+                        status.textContent =
+                            `Surveillance HORUS : ${surveillanceJoinCode || ""} — active`;
+                    }
+
+                    alert(
+                        `Impossible de clôturer la surveillance.\n\n${error.message}`
                     );
                 }
             }
