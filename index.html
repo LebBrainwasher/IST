@@ -1374,6 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <button
                 type="button"
+                id="endSurveillanceBtn"
                 onclick="endHorusSurveillance()"
                 style="
                     flex:1;
@@ -1642,6 +1643,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        function updateSurveillanceControls() {
+            const createBtn = document.getElementById("createSurveillanceBtn");
+            const joinBtn = document.getElementById("joinSurveillanceBtn");
+            const endBtn = document.getElementById("endSurveillanceBtn");
+
+            const hasActiveSurveillance =
+                Boolean(surveillanceId && surveillanceJoinCode);
+
+            if (createBtn) {
+                createBtn.disabled = hasActiveSurveillance;
+                createBtn.style.opacity = hasActiveSurveillance ? "0.45" : "1";
+                createBtn.style.cursor =
+                    hasActiveSurveillance ? "not-allowed" : "pointer";
+            }
+
+            if (joinBtn) {
+                joinBtn.disabled = hasActiveSurveillance;
+                joinBtn.style.opacity = hasActiveSurveillance ? "0.45" : "1";
+                joinBtn.style.cursor =
+                    hasActiveSurveillance ? "not-allowed" : "pointer";
+            }
+
+            if (endBtn) {
+                endBtn.disabled = !hasActiveSurveillance;
+                endBtn.style.opacity = hasActiveSurveillance ? "1" : "0.45";
+                endBtn.style.cursor =
+                    hasActiveSurveillance ? "pointer" : "not-allowed";
+            }
+        }
+
         function loadActiveHorusSurveillance() {
             try {
                 const raw = localStorage.getItem(
@@ -1759,6 +1790,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Le POST de rattachement recréera proprement
                 // la nouvelle session SES-* de cette page.
                 await joinHorusSurveillance(saved.joinCode);
+
+                updateSurveillanceControls();
 
             } catch (error) {
                 console.error(
