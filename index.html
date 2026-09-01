@@ -1374,6 +1374,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <button
                 type="button"
+                id="leaveSurveillanceBtn"
+                onclick="leaveHorusSurveillance()"
+                disabled
+                style="
+                    flex:1;
+                    min-width:0;
+                    min-height:46px;
+                    padding:8px 6px;
+                    border:1px solid #3f6472;
+                    border-radius:10px;
+                    background:#263a43;
+                    color:#eeeeee;
+                    font-weight:700;
+                    font-size:0.82rem;
+                    white-space:nowrap;
+                    opacity:0.45;
+                    cursor:not-allowed;
+                "
+            >
+                ↩️ QUITTER
+            </button>
+
+            <button
+                type="button"
                 id="endSurveillanceBtn"
                 onclick="endHorusSurveillance()"
                 style="
@@ -1673,6 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let surveillanceId = null;
         let surveillanceJoinCode = null;
+        let surveillanceIsCreator = false;
         let surveillanceActionInProgress = false;
         let surveillanceReceptionInProgress = false;
 
@@ -1686,6 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeSurveillance = {
                 surveillanceId: surveillanceId,
                 joinCode: surveillanceJoinCode,
+                isCreator: surveillanceIsCreator,
                 operationId: 1,
                 operatorLabel: operatorInput.value.trim(),
                 pvLabel: pvInput.value.trim(),
@@ -1719,10 +1745,14 @@ document.addEventListener('DOMContentLoaded', () => {
         function updateSurveillanceControls() {
             const createBtn = document.getElementById("createSurveillanceBtn");
             const joinBtn = document.getElementById("joinSurveillanceBtn");
+            const leaveBtn = document.getElementById("leaveSurveillanceBtn");
             const endBtn = document.getElementById("endSurveillanceBtn");
 
             const hasActiveSurveillance =
                 Boolean(surveillanceId && surveillanceJoinCode);
+
+            const canEndSurveillance =
+                hasActiveSurveillance && surveillanceIsCreator;
 
             if (createBtn) {
                 createBtn.disabled = hasActiveSurveillance;
@@ -1738,11 +1768,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     hasActiveSurveillance ? "not-allowed" : "pointer";
             }
 
-            if (endBtn) {
-                endBtn.disabled = !hasActiveSurveillance;
-                endBtn.style.opacity = hasActiveSurveillance ? "1" : "0.45";
-                endBtn.style.cursor =
+            if (leaveBtn) {
+                leaveBtn.disabled = !hasActiveSurveillance;
+                leaveBtn.style.opacity = hasActiveSurveillance ? "1" : "0.45";
+                leaveBtn.style.cursor =
                     hasActiveSurveillance ? "pointer" : "not-allowed";
+            }
+
+            if (endBtn) {
+                endBtn.disabled = !canEndSurveillance;
+                endBtn.style.opacity = canEndSurveillance ? "1" : "0.45";
+                endBtn.style.cursor =
+                    canEndSurveillance ? "pointer" : "not-allowed";
             }
         }
 
@@ -1864,6 +1901,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // la nouvelle session SES-* de cette page.
                 await joinHorusSurveillance(saved.joinCode);
 
+                // Restaure le droit du créateur après actualisation.
+                surveillanceIsCreator = Boolean(saved.isCreator);
+                saveActiveHorusSurveillance();
                 updateSurveillanceControls();
 
             } catch (error) {
@@ -2119,6 +2159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     surveillanceId = data.surveillance_id || null;
                     surveillanceJoinCode = data.join_code || null;
+                    surveillanceIsCreator = true;
 
                     const joinResponse = await fetch(
                         `${HORUS_SERVER_URL}/api/operations/1/surveillances/join/${encodeURIComponent(surveillanceJoinCode)}`,
@@ -2328,6 +2369,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     modal.style.display = "flex";
                 });
+            }
+
+            async function leaveHorusSurveillance() {
+                if (!surveillanceId || !surveillanceJoinCode) {
+                    return;
+                }
+
+                const currentJoinCode = surveillanceJoinCode;
+
+                const confirmed = await showHorusSurveillanceModal({
+                    title: "QUITTER LA SURVEILLANCE",
+                    message:
+                        `Vous allez quitter la surveillance HORUS ${currentJoinCode}.\n\n` +
+                        "La surveillance restera active pour les autres opérateurs.\n" +
+                        "Les événements déjà enregistrés resteront conservés.",
+                    confirmText: "QUITTER",
+                    showCancel: true
+                });
+
+                if (!confirmed) {
+                    return;
+                }
+
+                // On retire uniquement le rattachement local.
+                // La surveillance et ses événements restent intacts sur le serveur.
+                clearActiveHorusSurveillance();
+
+                surveillanceId = null;
+                surveillanceJoinCode = null;
+                surveillanceIsCreator = false;
+
+                // Une nouvelle session technique est créée pour permettre
+                // de créer ou rejoindre ensuite une autre surveillance.
+                sessionId = createHorusId("SES");
+                sessionDateISO = new Date().toISOString().slice(0, 10);
+
+                updateSurveillanceControls();
+
+                const status = document.getElementById("surveillanceStatus");
+
+                if (status) {
+                    status.textContent =
+                        `Surveillance HORUS : ${currentJoinCode} quittée — aucune surveillance active.`;
+                }
+
+                console.log(
+                    "Surveillance HORUS quittée localement :",
+                    currentJoinCode,
+                    "Nouvelle session :",
+                    sessionId
+                );
             }
 
             async function endHorusSurveillance() {
