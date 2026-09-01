@@ -2313,6 +2313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     surveillanceJoinCode = data.join_code || null;
                     
                     saveActiveHorusSurveillance();
+                    updateSurveillanceControls();
                     
                     // Le PV est imposé par la surveillance rejointe.
                     if (data.pv_label) {
